@@ -1,4 +1,24 @@
-const { connectDb, getDb, Worker } = require('./db');
+const { connectDb, getDb, Worker, OutageLog, MinerStatus } = require('./db');
+
+async function saveOutageLog(outageLogData) {
+  console.log('saveOutageLog', outageLogData);
+  await connectDb('saveOutageLog');
+  const db = getDb();
+
+  const newOutageLog = new OutageLog({
+    worker_name: outageLogData.worker_name,
+    outage_start_datetime: outageLogData.outage_start_datetime,
+    outage_end_datetime: outageLogData.outage_end_datetime,
+    outage_length: outageLogData.outage_length,
+    related_status_page_incident: outageLogData.related_status_page_incident,
+    snapshot_image: outageLogData.snapshot_image,
+    timestamp: Date.now(),
+  });
+
+  await newOutageLog.save();
+  console.log('Outage log saved.');
+}
+
 
 
 async function saveMinerStatus(minerStatus) {
@@ -132,6 +152,14 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
 //   const statistics = await db.collection('workers').find(query).toArray();
 //   return statistics;
 // }
+
+async function getDownWorkers() {
+  //console.log("Getting down workers");
+  await connectDb('getDownWorkers');
+  const db = getDb();
+  //console.log("Connected to DB for down workers");
+  return db.collection('minerstatus').find({ status: 'down' }).toArray();
+}
 
 //write a function similar to getMinerStatistics that returns the outages
 async function getOutages(startTime, endTime) {
@@ -270,4 +298,4 @@ async function saveWorkerData(workerData) {
     .catch((err) => console.log(`Encountered an error at ${event.toLocaleString("en-US", { timeZone: 'America/Los_Angeles'})}`,err));
 }
 
-module.exports = { saveMinerStatus, getMinerStatistics, saveWorkerData, updateStatus, updateOutages, getOutages };
+module.exports = { saveMinerStatus, getMinerStatistics, saveWorkerData, updateStatus, updateOutages, getOutages, saveOutageLog, getDownWorkers };

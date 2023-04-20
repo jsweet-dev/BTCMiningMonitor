@@ -1,9 +1,10 @@
 require('dotenv').config();
 const axios = require('axios');
+const { checkOutagePage } = require('./StatusScraper/outageChecker.js');
 const { saveWorkerData, updateStatus, updateOutages } = require('./dbFunctions.js');
 
 const F2POOL_API_KEY = process.env.F2POOL_API_KEY;
-console.log(`F2POOL_API_KEY: ${F2POOL_API_KEY}`);
+console.log('Starting polling at', new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
 async function fetchData() {
   try {
     // Fetch mining user list
@@ -59,5 +60,11 @@ async function fetchData() {
   }
 }
 
+console.log('Checking for outages...');
+checkOutagePage();
+setInterval(checkOutagePage, 5 * 60 * 1000);
+
 fetchData();
 setInterval(fetchData, 60 * 1000); // Poll every minute
+
+console.log('Finished loading polling.js');

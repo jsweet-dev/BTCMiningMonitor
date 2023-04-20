@@ -21,7 +21,10 @@ services:
       - "3001:3001"
     depends_on:
       - mongodb
-
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+          - screenshots:/app/screenshots
   frontend:
     build: ./frontend
     container_name: miner_monitoring_frontend
@@ -30,3 +33,4 @@ services:
 
 volumes:
   mongodb_data:
+  screenshots:
