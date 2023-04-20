@@ -89,7 +89,7 @@ const ReportPage = () => {
 
         fetchOutages();
 
-    }, [searchTerm.dateRange.startDate, searchTerm.dateRange.endDate, searchTerm.searchSubmitted]);
+    }, [searchTerm.dateRange, searchTerm.searchSubmitted]);
 
     useEffect(() => {
         if (searchTerm.workerName) {
@@ -98,8 +98,13 @@ const ReportPage = () => {
         } else {
             setUniqueMiners([]);
         }
-        setFilteredOutages(filterOutages(outages, searchTerm));
+    }, [outages, searchTerm, filteredOutages]);
+
+    useEffect(() => {
+        const filteredOutages = filterOutages(outages, searchTerm);
+        setFilteredOutages(filteredOutages);
     }, [outages, searchTerm]);
+
 
     const outageCount = filteredOutages.length;
 

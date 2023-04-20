@@ -32,21 +32,7 @@ const outageSchema = new mongoose.Schema({
 
 const Outage = mongoose.model('Outage', outageSchema);
 
-const OutageLogSchema = new mongoose.Schema({
-  worker_name: String,
-  outage_start_datetime: Date,
-  outage_end_datetime: Date,
-  outage_length: Number,
-  related_status_page_incident: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'StatusPageIncident',
-  },
-  snapshot_image: Buffer,
-  timestamp: Date,
-});
 
-// Create the OutageLog model based on the schema
-const OutageLog = mongoose.model('OutageLog', OutageLogSchema);
 
 const connectDb = async (caller = '') => {
   console.log(`Attempting connection to MongoDB ${caller !== '' ? "for " + caller : ''}...`);
@@ -67,5 +53,4 @@ module.exports = {
   Worker,
   MinerStatus,
   Outage,
-  OutageLog,
 };

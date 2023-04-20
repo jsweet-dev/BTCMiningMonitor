@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ReactECharts } from './ReactECharts.tsx';
-import { TableCell, TableRow, Paper, Table, TableHead, TableBody, TableContainer } from '@mui/material';
+import { TableCell, TableRow, Paper, Table, TableHead, TableBody, TableContainer, Grid, Box } from '@mui/material';
 
 const getOption = (worker, outageInfo) => {
     worker = worker[0];
@@ -104,32 +104,31 @@ const OutageDetail = ({ outageId }) => {
 
     useEffect(() => {
         async function fetchWorkers() {
-          const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
-          const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
-          const workerName = outageInfo.worker_name;
-          const query = {};
+            const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
+            const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
+            const workerName = outageInfo.worker_name;
+            const query = {};
 
-          query.startTime = startTime;
-          query.endTime = endTime;
-          query.workerName = workerName;
-          const workerData = await fetch('http://localhost:3001/api/workers', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(query),
-          }).then((data) => data.json());
-          setWorker(workerData);
+            query.startTime = startTime;
+            query.endTime = endTime;
+            query.workerName = workerName;
+            const workerData = await fetch('http://localhost:3001/api/workers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(query),
+            }).then((data) => data.json());
+            setWorker(workerData);
         }
         fetchWorkers();
-      }, [outageInfo]);
+    }, [outageInfo]);
 
 
-      useEffect(() => {
-        if(!worker) return;
-            setOption(getOption(worker, outageInfo));
-        }, [worker]);
-
+    useEffect(() => {
+        if (!worker) return;
+        setOption(getOption(worker, outageInfo));
+    }, [worker, outageInfo]);
 
 
     return (
@@ -156,16 +155,83 @@ const OutageDetail = ({ outageId }) => {
                 </Table>
             </TableContainer>
             <br />
-            {
-            option && <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <ReactECharts
-                    option={option}
-                    style={{ width: '80%', height: 400 }}
-                />
+            {option && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <ReactECharts
+                        option={option}
+                        style={{ width: '80%', height: 400 }}
+                    />
+                </div>
+            )}
+            <br />
+            <div>
+                <Grid container spacing={2}>
+                    <Grid item xs={12} md lg xl>
+                        <Box display="flex" flexWrap="wrap" justifyContent="center" gap={'10px'}>
+                            {outageInfo.screenshots.map((screenshot, index) => (
+                                <Paper 
+                                    elevation={4} 
+                                    key={screenshot} 
+                                    sx={{
+                                        "&:hover":{
+                                            transition: 'transform 1s ease-in-out',
+                                            transform: 'scale(1.4)'
+                                        }
+                                    }}
+                                >
+                                    <a href={`http://localhost:3001/screenshots/${screenshot}`} target="_blank" rel="noopener noreferrer">
+                                        <img
+                                            key={index}
+                                            src={`http://localhost:3001/screenshots/${screenshot}`}
+                                            alt={`Screenshot ${index}`}
+                                            style={{ width: '300px', margin: '10px' }}
+                                        />
+                                    </a>
+                                </Paper>
+                            ))
+                            }
+                        </Box>
+                    </Grid>
+                </Grid>
             </div>
-            }
         </div>
     );
+
+
+    // return (
+    //     <div>
+    //         <TableContainer component={Paper} id="outagesTable">
+    //             <Table aria-label="outages table">
+    //                 <TableHead>
+    //                     <TableRow colSpan={4}><TableCell>Outage Details</TableCell></TableRow>
+    //                     <TableRow>
+    //                         <TableCell>Worker Name</TableCell>
+    //                         <TableCell>Outage Start</TableCell>
+    //                         <TableCell>Outage End</TableCell>
+    //                         <TableCell>Outage Length</TableCell>
+    //                     </TableRow>
+    //                 </TableHead>
+    //                 <TableBody>
+    //                     <TableRow key={outageInfo._id}>
+    //                         <TableCell>{outageInfo.worker_name}</TableCell>
+    //                         <TableCell>{new Date(outageInfo.outage_start_datetime).toLocaleString()}</TableCell>
+    //                         <TableCell>{outageInfo.outage_end_datetime ? new Date(outageInfo.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
+    //                         <TableCell>{outageInfo.outage_length ? `${(outageInfo.outage_length / 3600000).toFixed(2)} hours` : 'Ongoing'}</TableCell>
+    //                     </TableRow>
+    //                 </TableBody>
+    //             </Table>
+    //         </TableContainer>
+    //         <br />
+    //         {
+    //         option && <div style={{ display: 'flex', justifyContent: 'center' }}>
+    //             <ReactECharts
+    //                 option={option}
+    //                 style={{ width: '80%', height: 400 }}
+    //             />
+    //         </div>
+    //         }
+    //     </div>
+    // );
 };
 
 export default OutageDetail;

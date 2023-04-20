@@ -8,6 +8,10 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+const screenshotsDir = '/app/screenshots/';
+app.use('/screenshots', express.static(screenshotsDir));
+
 app.use('/api', apiRouter);
 
 app.listen(PORT, () => {
