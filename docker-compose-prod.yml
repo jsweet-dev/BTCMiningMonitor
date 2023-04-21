@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:4.4
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27037:27017"
+    volumes:
+      - ./data/mongodb:/data/db
+
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3011:3001"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./data/screenshots:/data/screenshots
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3010:80"
