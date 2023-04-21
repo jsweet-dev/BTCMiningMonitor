@@ -14,10 +14,9 @@ async function checkOutagePage() {
     (elements) => elements.map((element) => element.outerHTML)
   );
   console.log('Incidents found:', incidents.length);
-  const SCREENSHOTS_DIR = '/app/screenshots';
 
-  if (!fs.existsSync(SCREENSHOTS_DIR)) {
-    fs.mkdirSync(SCREENSHOTS_DIR);
+  if (!fs.existsSync(process.env.SCREENSHOT_PATH)) {
+      fs.mkdirSync(process.env.SCREENSHOT_PATH);
   }
 
   const outagesSection = await page.$(
@@ -44,7 +43,7 @@ async function checkOutagePage() {
   }, watermarkText);
 
   const timestamp = Date.now();
-  const imagePath = `${SCREENSHOTS_DIR}/${timestamp}.png`;
+  const imagePath = `${process.env.SCREENSHOT_PATH}/${timestamp}.png`;
   await page.screenshot({ path: imagePath, clip: boundingBox });
   
   console.log('Screenshot saved:', imagePath);

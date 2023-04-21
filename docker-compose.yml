@@ -3,7 +3,6 @@ version: '3.8'
 services:
   mongodb:
     image: mongo:4.4
-    container_name: miner_monitoring_mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
@@ -14,7 +13,6 @@ services:
 
   backend:
     build: ./backend
-    container_name: miner_monitoring_backend
     environment:
       NODE_ENV: production
     ports:
@@ -24,10 +22,10 @@ services:
     cap_add:
       - SYS_ADMIN
     volumes:
-          - screenshots:/app/screenshots
+      - screenshots:/app/screenshots
+      
   frontend:
     build: ./frontend
-    container_name: miner_monitoring_frontend
     ports:
       - "3000:80"
 

@@ -1,6 +1,5 @@
 # Use the official Node.js 14 image as the base image
 FROM node:14
-RUN rm -rf /home/pptruser/screenshots
 
 # Install necessary dependencies for Puppeteer
 RUN apt-get update \
@@ -25,18 +24,6 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install
-
-# Create the .local-chromium directory
-# RUN mkdir -p /app/node_modules/puppeteer/.local-chromium/
-
-# Set up the sandbox file and directory
-# RUN find /app/node_modules/puppeteer/.local-chromium -type f -name chrome_sandbox -print \
-#     -exec chown root:root {} \; \
-#     -exec chmod 4755 {} \; \
-#     && mkdir -p /usr/local/sbin/ \
-#     && cp -p $(find /app/node_modules/puppeteer/.local-chromium -type f -name chrome_sandbox) /usr/local/sbin/chrome-devel-sandbox \
-#     && chown pptruser:pptruser /usr/local/sbin/chrome-devel-sandbox
-
 
 # Copy the application code into the container
 COPY --chown=pptruser:pptruser . .
