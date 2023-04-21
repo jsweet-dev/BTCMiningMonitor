@@ -75,7 +75,7 @@ const ReportPage = () => {
             query.startTime = new Date(startDate).getTime();
             query.endTime = new Date(endDate).getTime();
 
-            const outageData = await fetch('http://localhost:3001/api/outages', {
+            const outageData = await fetch(process.env.REACT_APP_API_HOST + '/api/outages', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

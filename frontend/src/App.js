@@ -52,7 +52,7 @@ function App() {
       query.startTime = start;
       query.endTime = end;
 
-      const workerData = await fetch('http://localhost:3001/api/workers', {
+      const workerData = await fetch(process.env.REACT_APP_API_HOST + '/api/workers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
