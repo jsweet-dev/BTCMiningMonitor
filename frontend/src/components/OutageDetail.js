@@ -91,7 +91,7 @@ const getOption = (worker, outageInfo) => {
                 const status = params[1].value[1] === 0 ? 'Down' : 'Up';
                 return `${date}<br/>Hash Rate: ${hashRate}<br/>Status: ${status}`;
             },
-        },  // ... existing chart options and series
+        },
     });
 };
 
@@ -136,7 +136,9 @@ const OutageDetail = ({ outageId }) => {
             <TableContainer component={Paper} id="outagesTable">
                 <Table aria-label="outages table">
                     <TableHead>
-                        <TableRow colSpan={4}><TableCell>Outage Details</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} sx={
+                            {fontSize: '22px', fontWeight: 'bold', textAlign: 'center'}
+                        }>Outage Details for <span style={{color:'red'}}>{outageInfo.worker_name}</span> starting <span style={{color:'red'}}>{new Date(outageInfo.outage_start_datetime).toLocaleString("en-US")}</span></TableCell></TableRow>
                         <TableRow>
                             <TableCell>Worker Name</TableCell>
                             <TableCell>Outage Start</TableCell>
@@ -154,16 +156,15 @@ const OutageDetail = ({ outageId }) => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            <br />
             {option && (
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <Paper elevation={12} style={{ margin: '20px', display: 'flex', justifyContent: 'center' }}>
                     <ReactECharts
                         option={option}
+                        initOptions={{ renderer: 'svg' }}
                         style={{ width: '80%', height: 400 }}
                     />
-                </div>
+                </Paper>
             )}
-            <br />
             <div>
                 <Grid container spacing={2}>
                     <Grid item xs={12} md lg xl>

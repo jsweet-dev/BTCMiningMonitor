@@ -24,21 +24,23 @@ async function checkOutagePage() {
     'body > div.layout-content.status.status-index.starter > div.container > div.unresolved-incidents'
   );
   const boundingBox = await outagesSection.boundingBox();
+  boundingBox.height += 100;
 
-  const watermarkText = `Captured on ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`;
+  const watermarkText = `Captured on ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' })}`;
   await page.evaluate((text) => {
     const watermark = document.createElement('div');
-    watermark.style.position = 'fixed';
-    watermark.style.bottom = '10px';
+    watermark.style.position = 'relative';
+    watermark.style.top = '10px';
     watermark.style.right = '10px';
-    watermark.style.fontSize = '16px';
+    watermark.style.fontSize = '18px';
     watermark.style.color = 'black';
     watermark.style.fontWeight = 'bold';
     watermark.style.zIndex = '9999';
-    watermark.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+    watermark.style.backgroundColor = 'rgba(220,220,220, 0.7)';
     watermark.style.padding = '4px';
+    watermark.style.margin = '10px';
     watermark.textContent = text;
-    document.body.appendChild(watermark);
+    document.querySelector('body > div.layout-content.status.status-index.starter > div.container > div.unresolved-incidents').prepend(watermark);
   }, watermarkText);
 
   const timestamp = Date.now();

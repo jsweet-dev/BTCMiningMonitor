@@ -112,9 +112,16 @@ async function getOutages(startTime, endTime) {
     query.outage_start_datetime = { $gte: startTime };
   }
   if(endTime) {
-    query.outage_end_datetime = { $lte: endTime };
+    query.$or = [
+      {
+        outage_end_datetime: { $lte: endTime}
+      }, 
+      {
+        outage_end_datetime: null
+      }
+    ];
   }
-  //console.log("Query: ", query);
+  // console.log("Query: ", query);
   const outages = await db.collection('outages').find(query).sort('outage_start_datetime',-1).toArray();
 
   const screenshotsDir = '/app/screenshots/'
@@ -135,7 +142,7 @@ async function getOutages(startTime, endTime) {
     outage.screenshots = outageScreenshots;
   }
 
-  console.log("Outages: ", outages);
+  // console.log("Outages: ", outages);
   return outages;
 }
 
@@ -171,9 +178,7 @@ async function updateStatus(userWorkerData) {
 
 
 async function updateOutages(userWorkerData) {
-  await connectDb('updateOutages');
-
-  const db = getDb();
+  await connectDb('saveWorkerData');
 
   for (const user of userWorkerData) {
     if (!user.workers) continue;
@@ -181,37 +186,38 @@ async function updateOutages(userWorkerData) {
       const worker_name = worker.hash_rate_info.name;
       const currentStatus = await getStatus(worker.hash_rate_info.hash_rate);
       const currentTime = Date.now();
-      
-      // console.log(`worker: ${worker_name} status: ${currentStatus} time: ${currentTime}`);
 
-      if (currentStatus === "down") {        
-        const existingOutage = await Outage.findOneAndUpdate(
-          { worker_name: worker_name, outage_end_datetime: null },
-          { worker_name: worker_name, outage_start_datetime: currentTime },
-          { upsert: true, new: true }
-        );
+      if (currentStatus === 'down') {
+        const existingOutage = await Outage.findOne({
+          worker_name: worker_name,
+          outage_end_datetime: null,
+        });
 
-        // If an existing outage was found, nothing needs to be done.
         if (!existingOutage) {
           const newOutage = new Outage({
             worker_name: worker_name,
             outage_start_datetime: currentTime,
+            outage_end_datetime: null,
+            outage_length: null,
           });
           await newOutage.save();
         }
       } else {
-        const ongoingOutage = await Outage.findOneAndUpdate(
-          { worker_name: worker_name, outage_end_datetime: null },
-          { outage_end_datetime: currentTime },
-          { new: true }
-        );
+        const ongoingOutage = await Outage.findOne({
+          worker_name: worker_name,
+          outage_end_datetime: null,
+        });
 
-        // If no ongoing outage was found, nothing needs to be done.
-        if (ongoingOutage && ongoingOutage.outage_start_datetime) {
+        if (ongoingOutage) {
           const outageLength = currentTime - ongoingOutage.outage_start_datetime;
           await Outage.updateOne(
             { _id: ongoingOutage._id },
-            { $set: { outage_length: outageLength } }
+            {
+              $set: {
+                outage_end_datetime: currentTime,
+                outage_length: outageLength,
+              },
+            }
           );
         }
       }

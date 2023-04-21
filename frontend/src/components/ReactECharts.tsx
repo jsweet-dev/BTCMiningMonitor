@@ -1,5 +1,5 @@
 import React, { CSSProperties, useRef, useEffect } from "react";
-import { CanvasRenderer } from "echarts/renderers";
+import { CanvasRenderer, SVGRenderer } from "echarts/renderers";
 import { init, getInstanceByDom, use } from "echarts/core";
 import { ScatterChart, LineChart } from "echarts/charts";
 import {
@@ -9,12 +9,12 @@ import {
   TitleComponent,
   DataZoomComponent,
 } from "echarts/components";
-import type { ECharts, ComposeOption, SetOptionOpts } from "echarts/core";
+import type { ECharts, ComposeOption, SetOptionOpts,  } from "echarts/core";
 import type {
   LineSeriesOption,
   ScatterSeriesOption,
 } from "echarts/charts";
-import type { TitleComponentOption, GridComponentOption } from "echarts/components";
+import type { TitleComponentOption, GridComponentOption, } from "echarts/components";
 
 // Register the required components
 use([
@@ -24,8 +24,9 @@ use([
   GridComponent,
   TooltipComponent,
   TitleComponent,
-  DataZoomComponent, // Used in Line Graph Charts
-  CanvasRenderer, // If you only need to use the canvas rendering mode, the bundle will not include the SVGRenderer module, which is not needed.
+  DataZoomComponent, 
+  CanvasRenderer,
+  SVGRenderer 
 ]);
 
 // Combine an Option type with only required components and charts via ComposeOption
@@ -42,6 +43,7 @@ export interface ReactEChartsProps {
   settings?: SetOptionOpts;
   loading?: boolean;
   theme?: "light" | "dark";
+  initOptions?: { renderer: "canvas" | "svg" };
 }
 
 export function ReactECharts({
@@ -50,6 +52,7 @@ export function ReactECharts({
   settings,
   loading,
   theme,
+  initOptions,
 }: ReactEChartsProps): JSX.Element {
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +60,7 @@ export function ReactECharts({
     // Initialize chart
     let chart: ECharts | undefined;
     if (chartRef.current !== null) {
-      chart = init(chartRef.current, theme);
+      chart = init(chartRef.current, theme, initOptions);
     }
 
     // Add chart resize listener

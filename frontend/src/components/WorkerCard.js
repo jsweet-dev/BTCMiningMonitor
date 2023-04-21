@@ -130,7 +130,7 @@ const WorkerCard = ({ worker }) => {
             key={chartKey} 
             option={option} 
             style={{ width: '80%', height: 400 }} 
-            // opts={{renderer: 'svg'}} // use svg to render the chart.
+            // initOptions={{renderer: 'svg'}} // use svg to render the chart.
             />
         </div>
       </CardContent>
