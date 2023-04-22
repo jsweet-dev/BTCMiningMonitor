@@ -180,10 +180,10 @@ const OutageDetail = ({ outageId }) => {
                                         }
                                     }}
                                 >
-                                    <a href={`http://localhost:3001/screenshots/${screenshot}`} target="_blank" rel="noopener noreferrer">
+                                    <a href={process.env.REACT_APP_API_HOST +`/screenshots/${screenshot}`} target="_blank" rel="noopener noreferrer">
                                         <img
                                             key={index}
-                                            src={`http://localhost:3001/screenshots/${screenshot}`}
+                                            src={process.env.REACT_APP_API_HOST +`/screenshots/${screenshot}`}
                                             alt={`Screenshot ${index}`}
                                             style={{ width: '300px', margin: '10px' }}
                                         />

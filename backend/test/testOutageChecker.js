@@ -47,10 +47,6 @@ async function checkOutagePage() {
       );
       console.log('Incidents found:', incidents.length);
     
-      if (!fs.existsSync(process.env.SCREENSHOT_PATH)) {
-          fs.mkdirSync(process.env.SCREENSHOT_PATH);
-      }
-    
       const outagesSection = await page.$(
         'body > div.layout-content.status.status-index.starter > div.container > div.unresolved-incidents'
       );
@@ -75,7 +71,7 @@ async function checkOutagePage() {
       }, watermarkText);
     
       const timestamp = Date.now();
-      const imagePath = `${process.env.SCREENSHOT_PATH}/${timestamp}.png`;
+      const imagePath = `./${timestamp}.png`;
       await page.screenshot({ path: imagePath, clip: boundingBox });
       
       console.log('Screenshot saved:', imagePath);
@@ -92,6 +88,5 @@ async function checkOutagePage() {
 }
 
 
-module.exports = {
-  checkOutagePage,
-};
+
+checkOutagePage();

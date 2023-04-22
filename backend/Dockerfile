@@ -1,5 +1,5 @@
 # Use the official Node.js 14 image as the base image
-FROM node:14
+FROM node:18
 
 # Install necessary dependencies for Puppeteer
 RUN apt-get update \
@@ -12,15 +12,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r pptruser && useradd -rm -g pptruser -G audio,video pptruser
 
+RUN mkdir -p /app/screenshots && chown pptruser:pptruser /app/screenshots
+
 USER pptruser
 
 WORKDIR /home/pptruser
 
-RUN mkdir -p /home/pptruser/screenshots 
-RUN chown -R pptruser:pptruser /home/pptruser/screenshots
-
 # Copy package.json and package-lock.json files into the container
-COPY package*.json ./
+COPY --chown=pptruser:pptruser package*.json ./
 
 # Install dependencies
 RUN npm install

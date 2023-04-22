@@ -7,7 +7,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
     ports:
-      - "27017:27017"
+      - "27037:27017"
     volumes:
       - mongodb_data:/data/db
 
@@ -16,18 +16,16 @@ services:
     environment:
       NODE_ENV: production
     ports:
-      - "3001:3001"
+      - "3011:3001"
     depends_on:
       - mongodb
-    cap_add:
-      - SYS_ADMIN
     volumes:
       - screenshots:/app/screenshots
       
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "3010:80"
 
 volumes:
   mongodb_data:
