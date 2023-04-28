@@ -35,6 +35,11 @@ const SearchBar = ({ filterCriteria, onSearch }) => {
     return query;
   }, [filterCriteria]);
 
+  const clearSearch = () => {
+    setSearchQuery(defaultSearchQuery);
+    onSearch(defaultSearchQuery);
+  };
+
   const [searchQuery, setSearchQuery] = useState(defaultSearchQuery);
 
   const handleChange = (event) => {
@@ -180,9 +185,12 @@ const SearchBar = ({ filterCriteria, onSearch }) => {
               );
             }
           })}
-          <Grid item xs={12}>
+          <Grid item xs={12} sx={{'& > button': { marginRight: '15px'}}}>
             <Button variant="contained" color="primary" onClick={handleSubmit}>
               Search
+            </Button>
+            <Button variant="contained" color="secondary" onClick={() => clearSearch()}>
+              Clear
             </Button>
           </Grid>
         </Grid>
