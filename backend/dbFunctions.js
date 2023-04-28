@@ -66,7 +66,12 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
         },
       },
     },
-    // Aggregation stage to group the data by worker name and aggregate the data
+    {
+      $sort: {
+        worker_name: 1,
+        timestamp: -1,
+      }
+    },
     {
       $group: {
         _id: '$worker_name',
@@ -74,7 +79,7 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
         host: { $first: '$host' },
         lastShare: { $max: '$last_share_at' },
         custom_sort_order: { $first: '$custom_sort_order' },
-        lastHashRate: { $max: { $divide: ['$hash_rate', 1000000000000] } },
+        lastHashRate: { $first: { $divide: ['$hash_rate', 1000000000000] } },
         status: { $first: '$miner_status.status' },
         history: {
           $push: {
