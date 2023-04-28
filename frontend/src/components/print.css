@@ -1,0 +1,39 @@
+@media print {
+    body {
+        counter-reset: page 1;
+    }
+
+    @page {
+        margin: 0.5cm;
+        size: auto;
+    }
+
+    #outagesTable th{
+        counter-increment: page;
+    }
+
+    #tableFooter::after {
+        content: "Page " counter(page);
+        position: fixed;
+        bottom: 1cm;
+        right: 1cm;
+        font-size: 14px;
+    }
+
+    tr {
+        page-break-inside: avoid;
+    }
+
+    tfoot {
+        display: table-row-group;
+    }
+
+    .no-print,
+    .no-print * {
+        display: none !important;
+    }
+
+    #outagesTable {
+        max-height: none;
+    }
+}
