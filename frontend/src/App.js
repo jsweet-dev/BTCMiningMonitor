@@ -98,7 +98,7 @@ function App() {
   return (
     <div className="App">
       <Router>
-      <nav style={{display: "flex", justifyContent: "center", gridGap: "2rem", alignContent:"center", borderBottom: 'solid 5px black', padding: '5px'}}>
+      <nav className="no-print" style={{display: "flex", justifyContent: "center", gridGap: "2rem", alignContent:"center", borderBottom: 'solid 5px black', padding: '5px'}}>
           <Link to="/workers">
             <Button style={{margin: '5px'}} variant="contained" color="primary">
               Workers
