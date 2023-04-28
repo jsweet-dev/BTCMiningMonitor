@@ -121,8 +121,33 @@ async function getOutages(startTime, endTime) {
       }
     ];
   }
-  // console.log("Query: ", query);
-  const outages = await db.collection('outages').find(query).sort('outage_start_datetime',-1).toArray();
+  // console.log("Query: ", JSON.stringify(query));
+
+  const pipeline = [
+    {
+      $match: query
+    },
+    {
+      $addFields: {
+        is_end_date_null: { $eq: ['$outage_end_datetime', null] }
+      }
+    },
+    {
+      $sort: {
+        is_end_date_null: -1,
+        outage_start_datetime: -1,
+      }
+    },
+    {
+      $project: {
+        is_end_date_null: 0
+      }
+    }
+  ];
+
+  const outages = await db.collection('outages')
+    .aggregate(pipeline)
+    .toArray();
 
   const screenshotsDir = '/app/screenshots/'
   const screenshotFiles = fs.readdirSync(screenshotsDir);
@@ -176,6 +201,13 @@ async function updateStatus(userWorkerData) {
   }
 }
 
+function getMiningUserName(worker_name) {
+  if (/^\d/.test(worker_name)) {
+    return process.env.MINING_USER_NAME_1; 
+  } else {
+    return process.env.MINING_USER_NAME_2; 
+  }
+}
 
 async function updateOutages(userWorkerData) {
   await connectDb('saveWorkerData');
@@ -199,6 +231,7 @@ async function updateOutages(userWorkerData) {
             outage_start_datetime: currentTime,
             outage_end_datetime: null,
             outage_length: null,
+            mining_user_name: getMiningUserName(worker_name), //If you don't have more than one mining user, you can statically assign the string, rather than calling the function
           });
           await newOutage.save();
         }
