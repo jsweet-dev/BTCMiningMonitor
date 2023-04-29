@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import './print.css'
@@ -16,7 +16,7 @@ const filterOutages = (outages, searchTerm) => {
     return outages.filter(outage => {
         let matches = true;
         if (searchTerm.workerName) {
-            if(searchTerm.workerName.includes('*')) searchTerm.workerName = searchTerm.workerName.replace(/\*/g, '.*');
+            if (searchTerm.workerName.includes('*')) searchTerm.workerName = searchTerm.workerName.replace(/\*/g, '.*');
             const regex = new RegExp(searchTerm.workerName, 'i');
             matches = matches && regex.test(outage.worker_name);
         }
@@ -26,7 +26,7 @@ const filterOutages = (outages, searchTerm) => {
             matches = matches && outage.outage_start_datetime >= startDate && outage.outage_start_datetime <= endDate;
         }
         if (searchTerm.miningUserName) {
-            if(searchTerm.miningUserName.includes('*')) searchTerm.miningUserName = searchTerm.miningUserName.replace(/\*/g, '.*');
+            if (searchTerm.miningUserName.includes('*')) searchTerm.miningUserName = searchTerm.miningUserName.replace(/\*/g, '.*');
             const regex = new RegExp(searchTerm.miningUserName, 'i');
             matches = matches && regex.test(outage.mining_user_name);
         }
@@ -48,7 +48,7 @@ const aggregateDataByWorker = (data) => {
         return acc;
     }, {});
 
-    return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) }});
+    return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
 };
 
 const generatePDF = (data, searchTerm) => {
@@ -142,7 +142,7 @@ const generatePDF = (data, searchTerm) => {
 
     // Add the table to the PDF
     doc.autoTable({
-        startY: newStartY+10,
+        startY: newStartY + 10,
         columns,
         body: tableData,
         didParseCell: (data) => {
@@ -187,6 +187,7 @@ const ReportPage = () => {
     const [outages, setOutages] = useState([]);
     const [filteredOutages, setFilteredOutages] = useState(outages);
     const [uniqueMiners, setUniqueMiners] = useState([]);
+    const [reportStatus, setReportStatus] = useState({ loading: false, error: false, reportUrl: '' });
 
     const handleSearch = useCallback((term) => {
         const searchSubmitted = Date.now();
@@ -232,6 +233,23 @@ const ReportPage = () => {
         setFilteredOutages(filteredOutages);
     }, [outages, searchTerm]);
 
+    const generateDetailedPDF = useCallback(async () => {
+        console.log("Generating detailed PDF", searchTerm)
+        setReportStatus({ loading: true, error: false, reportUrl: '' });
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/detailed`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ searchTerm: searchTerm }),
+            });
+            const reportUrl = await response.json();
+            setReportStatus({ loading: false, error: false, reportUrl });
+        } catch (error) {
+            setReportStatus({ loading: false, error: true, reportUrl: '' });
+        }
+    }, [searchTerm]);
 
     const outageCount = filteredOutages.length;
 
@@ -330,9 +348,17 @@ const ReportPage = () => {
             >
                 Print Summary
             </Button>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => ""}>
-                Generate Detailed PDF
+            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={generateDetailedPDF}>
+                {reportStatus.error ? "Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
+                {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
+            {reportStatus.reportUrl && (
+                <div style={{ marginTop: 10 }}>
+                    <a href={reportStatus.reportUrl.report} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                        View/Download Detailed Report
+                    </a>
+                </div>
+            )}
         </>
     );
 };
