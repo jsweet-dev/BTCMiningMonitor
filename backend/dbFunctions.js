@@ -11,11 +11,10 @@ async function saveMinerStatus(minerStatus) {
 async function getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName) {
   await connectDb('getMinerStatistics');
   const db = getDb();
-
   const matchStage = {
     $match: {},
   };
-
+  
   if (workerName) {
     matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
   }
@@ -33,9 +32,9 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
   const start = startTime ? parseInt(startTime) : currentTime - 24 * 60 * 60 * 1000;
   // Use endTime if provided, otherwise default to the current time
   const end = endTime ? parseInt(endTime) : currentTime;
-
+  
   matchStage.$match.timestamp = { $gte: start, $lte: end };
-
+  
   const pipeline = [
     {
       $lookup: {

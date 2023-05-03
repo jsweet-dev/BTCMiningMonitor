@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {getMinerStatistics, getOutages } = require('./dbFunctions');
-const { generatePdfWrapper } = require('./reportFunctions');
+const { generatePdfWrapper, generateDetailedPdfWrapper, generateDetailedPDF2 } = require('./reportFunctions');
 
 // api.js
 router.post('/workers', async (req, res) => {
@@ -34,13 +34,13 @@ router.post('/reports/detailed', async (req, res) => {
   try {
     console.log("Post to /reports/detailedReport")
     const  { searchTerm } = req.body;
-
+    console.log(searchTerm);
     const startTime = new Date(searchTerm.dateRange.startDate).getTime();
     const endTime = new Date(searchTerm.dateRange.endDate).getTime();
 
     const outages = await getOutages(startTime, endTime);
     console.log("Outages: ", outages.length);
-    const report = await generatePdfWrapper(outages, searchTerm);
+    const report = await generateDetailedPDF2(outages, searchTerm);
     // setTimeout(() => {
     //   res.json("#Success"+JSON.stringify(outages.length));
     // }, 10000);
