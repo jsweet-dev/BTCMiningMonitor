@@ -36,11 +36,11 @@ const Outage = mongoose.model('Outage', outageSchema);
 
 
 const connectDb = async (caller = '') => {
-  console.log(`Attempting connection to MongoDB ${caller !== '' ? "for " + caller : ''}...`);
+  // console.log(`Attempting connection to MongoDB ${caller !== '' ? "for " + caller : ''}...`);
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected');
-    console.log('');
+    // console.log('MongoDB connected');
+    // console.log('');
     return conn;
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
