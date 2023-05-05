@@ -3,8 +3,6 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import './print.css'
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 
 const MemoizedSearchBar = React.memo(SearchBar);
@@ -34,145 +32,6 @@ const filterOutages = (outages, searchTerm) => {
     });
 };
 
-const aggregateDataByWorker = (data) => {
-    const aggregatedData = data.reduce((acc, curr) => {
-        if (!acc[curr.worker_name]) {
-            acc[curr.worker_name] = {
-                worker_name: curr.worker_name,
-                outages: 0,
-                total_downtime: 0,
-            };
-        }
-        acc[curr.worker_name].outages += 1;
-        acc[curr.worker_name].total_downtime += parseFloat(curr.outage_length);
-        return acc;
-    }, {});
-
-    return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
-};
-
-const generatePDF = (data, searchTerm) => {
-    // console.log("Generating PDF", JSON.stringify(data));
-    const doc = new jsPDF('p', 'pt');
-    const currentTime = new Date();
-    const reportPeriodStart = new Date(searchTerm.dateRange.startDate)
-        .toLocaleDateString("en-US", { short: "numeric", timeZone: "America/los_angeles" })
-        .replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, month, day, year) => {
-            return `${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        });
-    const reportPeriodEnd = new Date(searchTerm.dateRange.endDate)
-        .toLocaleDateString("en-US", { short: "numeric", timeZone: "America/los_angeles" })
-        .replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, month, day, year) => {
-            return `${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        })
-    const reportGeneratedAt = currentTime.toLocaleString("en-US", { timeZone: "America/los_angeles" })
-        .replace(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}:\d{1,2}:\d{1,2}) (AM|PM)/, (match, month, day, year, time, ampm) => {
-            return `${month.padStart(2, '0')}-${day.padStart(2, '0')}-${year} ${time} ${ampm}`;
-        });
-
-    // Set PDF metadata
-    doc.setProperties({
-        title: 'Outage Details',
-        subject: `Outage Details ${reportPeriodStart} to ${reportPeriodEnd} as of ${reportGeneratedAt}`,
-    });
-
-    // Add a title to the PDF
-    doc.setFontSize(22);
-    doc.text(`Outages`, 40, 50);
-    doc.setFontSize(14);
-    doc.text(`${reportPeriodStart} to ${reportPeriodEnd}`, 40, 70);
-    doc.text(`Generated at ${reportGeneratedAt}`, 40, 90);
-
-    // Define the table columns
-    const columns = [
-        { header: 'Worker Name', dataKey: 'worker_name' },
-        { header: 'Outage Start', dataKey: 'outage_start_datetime' },
-        { header: 'Outage End', dataKey: 'outage_end_datetime' },
-        { header: 'Outage Length', dataKey: 'outage_length' },
-    ];
-
-    const aggregatedColumns = [
-        { header: 'Worker Name', dataKey: 'worker_name' },
-        { header: 'Outages', dataKey: 'outages' },
-        { header: 'Total Downtime', dataKey: 'total_downtime' },
-    ];
-
-    // Format the data for the table
-    const tableData = data.map((entry) => ({
-        worker_name: entry.worker_name,
-        outage_start_datetime: new Date(entry.outage_start_datetime).toLocaleString(),
-        outage_end_datetime: entry.outage_end_datetime ? new Date(entry.outage_end_datetime).toLocaleString() : 'Ongoing',
-        outage_length: entry.outage_length ? (entry.outage_length / 3600000).toFixed(2) : ((currentTime.getTime() - entry.outage_start_datetime) / 3600000).toFixed(2),
-    }));
-
-    // Calculate totals
-    const outageCount = tableData.length;
-    const totalOutageLength = tableData.reduce((acc, curr) => {
-        let outageLength = parseFloat(curr.outage_length);
-        if (outageLength) {
-            return acc + outageLength;
-        } else {
-            return acc;
-        }
-    }, 0);
-
-    const aggregatedTableData = aggregateDataByWorker(tableData);
-
-    doc.autoTable({
-        startY: 100,
-        columns: aggregatedColumns,
-        body: aggregatedTableData,
-        didParseCell: (data) => {
-            if (data.row.index === aggregatedTableData.length - 1) {
-                data.row.pageBreak = 'avoid'; // Keep the last row on the same page
-            }
-        },
-        didDrawCell: (data) => {
-            if (data.row.index === aggregatedTableData.length - 1 && data.cell.section === 'body') {
-                // Footer: totals
-                doc.setFontSize(12);
-                doc.text(`Total Outages: ${outageCount} \t\tTotal Outage Length: ${totalOutageLength.toFixed(2)} hours`, data.settings.margin.left, data.cell.y + data.cell.height + 15);
-            }
-        },
-    });
-
-    const newStartY = doc.autoTable.previous.finalY + 60;
-
-    doc.text(`Outage Details`, 40, newStartY);
-
-    // Add the table to the PDF
-    doc.autoTable({
-        startY: newStartY + 10,
-        columns,
-        body: tableData,
-        didParseCell: (data) => {
-            if (data.row.index === tableData.length - 1) {
-                data.row.pageBreak = 'avoid'; // Keep the last row on the same page
-            }
-        },
-        didDrawCell: (data) => {
-            if (data.row.index === tableData.length - 1 && data.cell.section === 'body') {
-                // Footer: totals
-                doc.setFontSize(12);
-                doc.text(`Total Outages: ${outageCount}`, data.settings.margin.left, data.cell.y + data.cell.height + 15);
-                doc.text(`Total Outage Length: ${totalOutageLength.toFixed(2)} hours`, data.settings.margin.left, data.cell.y + data.cell.height + 30);
-            }
-        },
-        // didDrawPage: (data) => {
-        //     if (doc.internal.getNumberOfPages() === data.pageNumber) {
-        //         console.log(`The current page is ${data.pageNumber} and the total number of pages is ${doc.internal.getNumberOfPages()} `);
-        //         // Footer: totals
-        //         doc.setFontSize(12);
-        //         doc.text(`Total Outages: ${outageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 30);
-        //         doc.text(`Total Outage Length: ${totalOutageLength.toFixed(2)} hours`, data.settings.margin.left, doc.internal.pageSize.height - 15);
-        //     }
-        // },
-    });
-
-    // Save the PDF
-    doc.save('Outage Report ' + currentTime.toLocaleDateString("en-US") + '.pdf');
-};
-
 const currentTime = Date.now();
 const initialSearchTerm = {
     dateRange: {
@@ -188,6 +47,7 @@ const ReportPage = () => {
     const [filteredOutages, setFilteredOutages] = useState(outages);
     const [uniqueMiners, setUniqueMiners] = useState([]);
     const [reportStatus, setReportStatus] = useState({ loading: false, error: false, reportUrl: '' });
+    const [summaryReportStatus, setSummaryReportStatus] = useState({ loading: false, error: false, reportUrl: '' });
 
     const handleSearch = useCallback((term) => {
         const searchSubmitted = Date.now();
@@ -244,10 +104,35 @@ const ReportPage = () => {
                 },
                 body: JSON.stringify({ searchTerm: searchTerm }),
             });
-            const reportUrl = await response.json();
+            const resJson = await response.json();
+            const arrayBuffer = Uint8Array.from(resJson.data);
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            const reportUrl = URL.createObjectURL(blob);
             setReportStatus({ loading: false, error: false, reportUrl });
         } catch (error) {
             setReportStatus({ loading: false, error: true, reportUrl: '' });
+        }
+    }, [searchTerm]);
+
+    const generateSummaryPDF = useCallback(async () => {
+        console.log("Generating summary PDF", searchTerm)
+        setSummaryReportStatus({ loading: true, error: false, reportUrl: '' });
+        try {
+            const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/summary`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ searchTerm: searchTerm }),
+            });
+            const resJson = await response.json();
+            const arrayBuffer = Uint8Array.from(resJson.data);
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            const reportUrl = URL.createObjectURL(blob);
+            setSummaryReportStatus({ loading: false, error: false, reportUrl });
+        } catch (error) {
+            console.log("Error generating summary PDF: ", error)
+            setSummaryReportStatus({ loading: false, error: true, reportUrl: '' });
         }
     }, [searchTerm]);
 
@@ -336,9 +221,20 @@ const ReportPage = () => {
                     </Table>
                 </TableContainer>
             </div>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF(filteredOutages, searchTerm)}>
+            {/* <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF(filteredOutages, searchTerm)}>
                 Generate Summary PDF
+            </Button> */}
+            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={generateSummaryPDF}>
+                {summaryReportStatus.error ? "Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
+                {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
+            {summaryReportStatus.reportUrl && (
+                <div style={{ marginTop: 10 }}>
+                    <a href={summaryReportStatus.reportUrl} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                        View/Download Summary Report
+                    </a>
+                </div>
+            )}
             <Button
                 className="no-print"
                 style={{ margin: "10px" }}
@@ -354,7 +250,7 @@ const ReportPage = () => {
             </Button>
             {reportStatus.reportUrl && (
                 <div style={{ marginTop: 10 }}>
-                    <a href={reportStatus.reportUrl.report} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                    <a href={reportStatus.reportUrl} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
                         View/Download Detailed Report
                     </a>
                 </div>
