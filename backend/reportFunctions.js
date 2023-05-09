@@ -1,6 +1,5 @@
-//TODO: Remove unused imports once function cleanup is complete
 const echarts = require('echarts');
-const { getMinerStatistics } = require('./dbFunctions');
+const { getMinerStatistics, logMsg } = require('./dbFunctions');
 const { JSDOM } = require('jsdom');
 const { createCanvas } = require('canvas');
 const fs = require('fs');
@@ -9,7 +8,7 @@ const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const formatDateTime = (date, dateOnly = true) => {
-    // console.log(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`);
+    // logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`);
     let retVal = "";
 
     retVal = new Date(date)
@@ -21,12 +20,12 @@ const formatDateTime = (date, dateOnly = true) => {
         : retVal.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}:\d{1,2}:\d{1,2}) (AM|PM)/, (match, month, day, year, time, ampm) => {
             return `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${time} ${ampm}`;
         });
-    // console.log(`formatDateTime returning: ${retVal}`)
+    // logMsg(`formatDateTime returning: ${retVal}`)
     return retVal;
 };
 
 const aggregateDataByWorker = (data) => {
-    // console.log("Aggregating data by worker", data);
+    // logMsg("Aggregating data by worker", data);
     const aggregatedData = data.reduce((acc, curr) => {
         if (!acc[curr.worker_name]) {
             acc[curr.worker_name] = {
@@ -39,13 +38,13 @@ const aggregateDataByWorker = (data) => {
         acc[curr.worker_name].total_downtime += parseFloat(curr.outage_length);
         return acc;
     }, {});
-    // console.log("Aggregated data", aggregatedData);
+    // logMsg("Aggregated data", aggregatedData);
     return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
 };
 
 const getOption = (worker) => {
     worker = worker[0];
-    // console.log("worker= ", JSON.stringify(worker))
+    // logMsg("worker= ", JSON.stringify(worker))
     return ({
         title: {
             text: `${worker._id}`,
@@ -117,7 +116,7 @@ const getOption = (worker) => {
 };
 
 const getWorkerData = async function fetchWorkers(outageInfo) {
-    // console.log("Fetching worker data");
+    // logMsg("Fetching worker data");
     const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
     const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
     const workerName = outageInfo.worker_name;
@@ -134,7 +133,7 @@ async function generateChart(outage) {
     });
 
     const workerData = await getWorkerData(outage);
-    // console.log("workerData= ", JSON.stringify(workerData))
+    // logMsg("workerData= ", JSON.stringify(workerData))
 
     echarts.setPlatformAPI({ canvas: createCanvas });
     const canvas = createCanvas(500, 250);
@@ -348,7 +347,7 @@ const generatePDF = async (data, searchTerm) => {
         return pdfBlob;
         
     } catch (error) {
-        console.log(error);
+        logMsg(error);
     }
 };
 
@@ -358,11 +357,10 @@ const generateDetailedPDF = async (data, searchTerm) => {
         const tableLayouts = getTableLayouts();
         
         const content = generateFirstPage(tableData, searchTerm);
-
         const chartPromises = tableData.map(async (outage, index) => {
-            // console.log(`Outage = ${JSON.stringify(outage)} and index = ${index}`);
+            // logMsg(`Outage = ${JSON.stringify(outage)} and index = ${index}`);
             const chartImg = await generateChart(outage); // Replace with an appropriate implementation
-
+            
             const outagePageContent = [
                 // { text: 'Outage Details', fontSize: 16, margin: [40, 40, 0, 0], pageBreak: index === 0 ? 'after' : 'before' },
                 {
@@ -396,7 +394,7 @@ const generateDetailedPDF = async (data, searchTerm) => {
                 {
                     image: chartImg // If chartImg is a data URL for the chart image
                 }
-            ];
+            ];         
 
             // Add screenshots
             const screenshotColumns = Array(4).fill().map(() => ({ stack: [], margin: [0, 0, 0, 10] }));
@@ -421,7 +419,6 @@ const generateDetailedPDF = async (data, searchTerm) => {
 
             return outagePageContent;
         });
-
         const outageDetailsPages = await Promise.all(chartPromises);
         content.push(...outageDetailsPages.flat());
 
@@ -429,7 +426,6 @@ const generateDetailedPDF = async (data, searchTerm) => {
 
         pdfMake.tableLayouts = tableLayouts;
         const pdfDoc = pdfMake.createPdf(docDefinition);
-
         const pdfBlob = await new Promise((resolve, reject) => {
             pdfDoc.getBuffer((buffer) => {
                 
@@ -438,7 +434,7 @@ const generateDetailedPDF = async (data, searchTerm) => {
         });
         return pdfBlob;
     } catch (error) {
-        console.log(error);
+        logMsg(error);
     }
 };
 

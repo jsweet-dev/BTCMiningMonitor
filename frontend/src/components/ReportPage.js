@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress } from '@mui/material';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import './print.css'
@@ -8,7 +9,7 @@ import './print.css'
 const MemoizedSearchBar = React.memo(SearchBar);
 
 const filterOutages = (outages, searchTerm) => {
-    console.log(`Filtering outages with searchTerm: ${JSON.stringify(searchTerm)}`);
+    // console.debug(`Filtering outages with searchTerm: ${JSON.stringify(searchTerm)}`);
     if (!searchTerm) return outages;
 
     return outages.filter(outage => {
@@ -33,12 +34,38 @@ const filterOutages = (outages, searchTerm) => {
 };
 
 const currentTime = Date.now();
+const calculatedStartOfMonth = startOfMonth(new Date()).getTime()
+const calculatedEndOfMonth = endOfMonth(new Date()).getTime()
 const initialSearchTerm = {
     dateRange: {
-        startDate: currentTime - 30 * 24 * 60 * 60 * 1000,
-        endDate: currentTime
-    },
+        startDate: calculatedStartOfMonth,
+        endDate: calculatedEndOfMonth
+  },
     searchSubmitted: currentTime
+}
+
+// Function to periodically check the job status
+function checkJobStatus(jobId, type) {
+    console.debug(`Checking job status for jobId: ${jobId}`);
+    return new Promise(async (resolve, reject) => {
+        const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/status/${jobId}`);
+        const data = await response.json();
+
+        if (response.status === 200) {
+            console.debug(`Report generation complete for jobId: ${jobId}`);
+            resolve(data); // The report is ready, return the data
+        } else if (response.status === 202) {
+            console.debug(`Report generation still in progress for jobId: ${jobId}`);
+            setTimeout(() => {
+                checkJobStatus(jobId) // Report generation is still in progress, check again after a delay
+                    .then(resolve)
+                    .catch(reject);
+            }, type === 'detailed' ? 12000 : 5000); // Wait for 12 seconds before checking the status again
+        } else {
+            console.log(`Report generation failed for jobId: ${jobId}`);
+            reject(data); // An error occurred, reject with the error message
+        }
+    });
 }
 
 const ReportPage = () => {
@@ -70,7 +97,7 @@ const ReportPage = () => {
                 },
                 body: JSON.stringify(query),
             }).then((data) => data.json());
-            // console.log("Here's what we got back: ",outageData);
+            // console.debug("Here's what we got back: ",outageData);
 
             setOutages(outageData);
         }
@@ -93,32 +120,15 @@ const ReportPage = () => {
         setFilteredOutages(filteredOutages);
     }, [outages, searchTerm]);
 
-    const generateDetailedPDF = useCallback(async () => {
-        console.log("Generating detailed PDF", searchTerm)
-        setReportStatus({ loading: true, error: false, reportUrl: '' });
-        try {
-            const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/detailed`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ searchTerm: searchTerm }),
-            });
-            const resJson = await response.json();
-            const arrayBuffer = Uint8Array.from(resJson.data);
-            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-            const reportUrl = URL.createObjectURL(blob);
-            setReportStatus({ loading: false, error: false, reportUrl });
-        } catch (error) {
-            setReportStatus({ loading: false, error: true, reportUrl: '' });
-        }
-    }, [searchTerm]);
 
-    const generateSummaryPDF = useCallback(async () => {
-        console.log("Generating summary PDF", searchTerm)
-        setSummaryReportStatus({ loading: true, error: false, reportUrl: '' });
+    const generatePDF = useCallback(async (type) => {
+        // console.debug(`Generating ${type} PDF`)//, searchTerm)
+        type === 'summary' 
+        ? setSummaryReportStatus({ loading: true, error: false, reportUrl: '' }) 
+        : setReportStatus({ loading: true, error: false, reportUrl: '' });
+        
         try {
-            const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/summary`, {
+            const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/${type}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -126,13 +136,25 @@ const ReportPage = () => {
                 body: JSON.stringify({ searchTerm: searchTerm }),
             });
             const resJson = await response.json();
-            const arrayBuffer = Uint8Array.from(resJson.data);
+            const jobId = resJson.jobId;
+
+            // Check the job status until the report is ready or an error occurs
+            if(!jobId) {
+                throw new Error('503');
+            }
+            const report = await checkJobStatus(jobId, type);
+            // console.debug('Report received:', report);
+            const arrayBuffer = Uint8Array.from(report.data);
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
             const reportUrl = URL.createObjectURL(blob);
-            setSummaryReportStatus({ loading: false, error: false, reportUrl });
+            type === 'summary'
+            ? setSummaryReportStatus({ loading: false, error: false, reportUrl })
+            : setReportStatus({ loading: false, error: false, reportUrl });
         } catch (error) {
-            console.log("Error generating summary PDF: ", error)
-            setSummaryReportStatus({ loading: false, error: true, reportUrl: '' });
+            // console.debug('Error generating report:', error.message);
+            type === 'summary'
+            ? setSummaryReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' })
+            : setReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' });
         }
     }, [searchTerm]);
 
@@ -224,17 +246,10 @@ const ReportPage = () => {
             {/* <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF(filteredOutages, searchTerm)}>
                 Generate Summary PDF
             </Button> */}
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={generateSummaryPDF}>
-                {summaryReportStatus.error ? "Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
+            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
+                {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
                 {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
-            {summaryReportStatus.reportUrl && (
-                <div style={{ marginTop: 10 }}>
-                    <a href={summaryReportStatus.reportUrl} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
-                        View/Download Summary Report
-                    </a>
-                </div>
-            )}
             <Button
                 className="no-print"
                 style={{ margin: "10px" }}
@@ -244,13 +259,20 @@ const ReportPage = () => {
             >
                 Print Summary
             </Button>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={generateDetailedPDF}>
-                {reportStatus.error ? "Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
+            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
+                {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
                 {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
+            {summaryReportStatus.reportUrl && (
+                <div style={{ marginTop: 10 }}>
+                    <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                        View/Download Summary Report
+                    </a>
+                </div>
+            )}
             {reportStatus.reportUrl && (
                 <div style={{ marginTop: 10 }}>
-                    <a href={reportStatus.reportUrl} download={`Detailed Outages Report ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                    <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
                         View/Download Detailed Report
                     </a>
                 </div>

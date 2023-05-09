@@ -2,6 +2,10 @@ const { connectDb, getDb, Worker, Outage, MinerStatus } = require('./db');
 const fs = require('fs');
 const path = require('path');
 
+const logMsg = (msg) => {
+  console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
+}
+
 async function saveMinerStatus(minerStatus) {
   await connectDb('saveMinerStatus');
   const db = getDb();
@@ -107,10 +111,10 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
 }
 
 async function getOutages(startTime, endTime) {
-  //console.log("Getting outages");
+  //logMsg("Getting outages");
   await connectDb('getOutages');
   const db = getDb();
-  //console.log("Connected to DB for outages");
+  //logMsg("Connected to DB for outages");
   const query = { };
   if(startTime) {
     query.outage_start_datetime = { $gte: startTime };
@@ -125,7 +129,7 @@ async function getOutages(startTime, endTime) {
       }
     ];
   }
-  // console.log("Query: ", JSON.stringify(query));
+  // logMsg("Query: ", JSON.stringify(query));
 
   const pipeline = [
     {
@@ -155,23 +159,23 @@ async function getOutages(startTime, endTime) {
 
   const screenshotsDir = '/app/screenshots/'
   const screenshotFiles = fs.readdirSync(screenshotsDir);
-  // console.log("screenshot files: ", screenshotFiles);
+  // logMsg("screenshot files: ", screenshotFiles);
 
 // Add screenshot filenames to each outage object
   for (const outage of outages) {
-    // console.log("processing screenshots for outage: ", outage.outage_start_datetime);
+    // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
     const outageStart = outage.outage_start_datetime;
     const outageEnd = outage.outage_end_datetime ? outage.outage_end_datetime : new Date().getTime();
-    // console.log(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
+    // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
     const outageScreenshots = screenshotFiles.filter(file => {
       const timestamp = parseInt(path.basename(file, '.png'));
       return timestamp >= outageStart && timestamp <= outageEnd;
     });
-    // console.log("outageScreenshots: ", outageScreenshots);
+    // logMsg("outageScreenshots: ", outageScreenshots);
     outage.screenshots = outageScreenshots;
   }
 
-  // console.log("Outages: ", outages);
+  // logMsg("Outages: ", outages);
   return outages;
 }
 
@@ -315,7 +319,7 @@ async function updateOutages(userWorkerData) {
 async function saveWorkerData(workerData) {
   await connectDb('saveWorkerData');
 
-  // console.log('Saving worker data:', workerData);
+  // logMsg('Saving worker data:', workerData);
     const promises = workerData.map(async (user) => {
       const { workers, ...userData } = user;
       if(!workers) return;
@@ -342,8 +346,16 @@ async function saveWorkerData(workerData) {
     
     const event = new Date(Date.now());
     await Promise.all(promises)
-    .then(console.log("Saving worker data at",event.toLocaleString("en-US", { timeZone: 'America/Los_Angeles'})))
-    .catch((err) => console.log(`Encountered an error at ${event.toLocaleString("en-US", { timeZone: 'America/Los_Angeles'})}`,err));
+    .then(logMsg("Saving worker data"))
+    .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`));
 }
 
-module.exports = { saveMinerStatus, getMinerStatistics, saveWorkerData, updateStatus, updateOutages, getOutages };
+module.exports = { 
+  saveMinerStatus, 
+  getMinerStatistics, 
+  saveWorkerData, 
+  updateStatus, 
+  updateOutages, 
+  getOutages,
+  logMsg 
+};
