@@ -249,7 +249,7 @@ async function updateOutages(userWorkerData) {
           outage_end_datetime: null,
         });
 
-        if (ongoingOutage) {
+        if (ongoingOutage) { //miner is up now, but an ongoing outage was found and needs to be updated
           const outageLength = currentTime - ongoingOutage.outage_start_datetime;
           await Outage.updateOne(
             { _id: ongoingOutage._id },
