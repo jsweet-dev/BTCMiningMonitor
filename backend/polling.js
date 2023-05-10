@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const { checkOutagePage } = require('./StatusScraper/outageChecker.js');
+const { checkOutagePage } = require('./outageChecker.js');
 const { saveWorkerData, updateStatus, updateOutages } = require('./dbFunctions.js');
 
 const F2POOL_API_KEY = process.env.F2POOL_API_KEY;
