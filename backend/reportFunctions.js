@@ -47,7 +47,7 @@ const getOption = (worker) => {
     // logMsg("worker= ", JSON.stringify(worker))
     return ({
         title: {
-            text: `${worker.workerName}`,
+            text: `${worker._id}`,
             left: 'center',
         },
         xAxis: {
