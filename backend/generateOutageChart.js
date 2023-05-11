@@ -1,16 +1,25 @@
 require('dotenv').config()
 const { connectDb, getDb } = require('./db');
+const mongoose = require('mongoose');
 const echarts = require('echarts');
 const { getMinerStatistics } = require('./dbFunctions');
 const sharp = require('sharp');
 
-async function getOutages(startTime, endTime) {
+async function getOutages(id, workerName, miningUserName, startTime, endTime) {
     //logMsg("Getting outages");
-    await connectDb('getOutages2');
+    await connectDb('getOutages (generateOutageChart.js)');
     const db = getDb();
     //logMsg("Connected to DB for outages");
     const query = {};
-    if (startTime) {
+    if (id) {
+        query._id = { $eq: new mongoose.Types.ObjectId(id) }
+    }
+    if (workerName) {
+        matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
+    }
+    if (miningUserName) {
+        matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
+    } if (startTime) {
         query.outage_start_datetime = { $gte: startTime };
     }
     if (endTime) {
@@ -23,7 +32,8 @@ async function getOutages(startTime, endTime) {
             }
         ];
     }
-    // logMsg("Query: ", JSON.stringify(query));
+
+    console.log("Query: ", JSON.stringify(query));
 
     const pipeline = [
         {
@@ -50,28 +60,40 @@ async function getOutages(startTime, endTime) {
     const outages = await db.collection('outages')
         .aggregate(pipeline)
         .toArray();
-    return outages;
+
+    if (outages.length > 1) {
+        return outages;
+    } else {
+        return outages[0];
+    }
 }
 
-const testOutage = {
-    "_id": "6458f46100eebf943ea31d75",
-    "worker_name": "sm2",
-    "outage_start_datetime": 1683551329848,
-    "outage_end_datetime": 1683552410079,
-    "outage_length": 1080231,
-    "mining_user_name": "et3eo7m00nfi",
-    "__v": 0,
-    "screenshots": ["1683551570407.png", "1683551870286.png", "1683552170287.png"]
-};
+const getOption = (worker, outage = {}) => {
+    let outageStartDate = null;
+    let outageEndDate = null;
 
+    if (!!outage) {
+        outageStartDate = new Date(outage.outage_start_datetime);
+        outageEndDate = new Date(outage.outage_end_datetime);
+    }
 
-const getOption = (worker) => {
     worker = worker[0];
     // logMsg("worker= ", JSON.stringify(worker))
     return ({
         title: {
-            text: `${worker._id}`,
+            text: `${worker._id}` + 
+                    `${outage 
+                        ? ` on ${outageStartDate.toLocaleDateString("en-US")}` + 
+                           `${outageEndDate.getDate() === outageStartDate.getDate() 
+                                ? '' 
+                                : ` - ${outageEndDate.toLocaleDateString("en-US")}`}` 
+                        : ''}`,
+            textStyle: {
+                fontSize: 18,
+                lineHeight: 22,
+            },
             left: 'center',
+            padding: [20, 0, 0, 0],
         },
         xAxis: {
             type: 'time',
@@ -99,6 +121,9 @@ const getOption = (worker) => {
                 nameGap: 30,
                 nameTextStyle: {
                     fontWeight: 'bold',
+                },
+                splitLine: {
+                    show: false
                 },
                 axisLabel: {
                     formatter: (value) => (value === 0 ? 'Down' : value === 1 ? 'Up' : ''),
@@ -140,8 +165,8 @@ const getOption = (worker) => {
 
 const getWorkerData = async function fetchWorkers(outageInfo) {
     // logMsg("Fetching worker data");
-    const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
-    const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
+    const startTime = outageInfo.outage_start_datetime - (1200000);
+    const endTime = outageInfo.outage_end_datetime + (1200000);
     const workerName = outageInfo.worker_name;
 
     const workerData = await getMinerStatistics("", workerName, "", startTime, endTime, "");
@@ -149,46 +174,47 @@ const getWorkerData = async function fetchWorkers(outageInfo) {
     return workerData;
 };
 
-//svg way:
-async function saveChartToFile(outage) {
+async function saveChartToFile(outageId) {
+    console.log(outageId);
+    const outage = await getOutages(outageId);
     const workerData = await getWorkerData(outage);
-    // logMsg("workerData= ", JSON.stringify(workerData))
+    console.log("outage= ", JSON.stringify(outage))
 
     const chart = echarts.init(null, null, {
         renderer: 'svg',
         ssr: true,
-        width: 600,
-        height: 200,
+        width: 800,
+        height: 320,
     });
 
-    const options = getOption(workerData);
+    const options = getOption(workerData, outage);
     options.backgroundColor = '#FFFFFF';
     chart.setOption(options);
 
     const svg = chart.renderToSVGString();
-
     sharp(Buffer.from(svg), { density: 200 }).toFile(`./outage_charts/${outage._id}.png`);
 
-    console.log(`Chart saved to ${outage._id}.png`);
+    console.log(`\tChart saved to ${outage._id}.png`);
 };
 
 let count = 0;
+// This only needs to be used once to generate charts for past outages, 
+// new outage charts will be scheduled to generate using saveChartToFile by the polling.js script
 async function generateCharts() {
     const outages = await getOutages();
     console.log("outages= ", outages.length)
+    // console.log("outage 1= ", outages[0]);
     for (let outage of outages) {
         count++;
-        console.log("Generating charts: ", count)
+        console.log("Generating chart: ", count)
         await saveChartToFile(outage);
     }
     console.log("Done generating charts")
 }
 
-generateCharts();
+saveChartToFile("6446fed0d6285be56be0ad26");
 
-
-// for (let outage of outages) {
-//     saveChartToFile(outage);
-// }
-
-// module.exports = saveChartToFile;
+// module.exports = {
+//     saveChartToFile,
+//     generateCharts  
+// } 
