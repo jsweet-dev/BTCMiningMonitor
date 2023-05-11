@@ -77,7 +77,7 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
     },
     {
       $group: {
-        workerName: '$worker_name',
+        _id: '$worker_name',
         miningUserName: { $first: '$mining_user_name' },
         host: { $first: '$host' },
         lastShare: { $max: '$last_share_at' },
@@ -249,7 +249,7 @@ async function updateOutages(userWorkerData) {
           outage_end_datetime: null,
         });
 
-        if (ongoingOutage) { //miner is up now, but an ongoing outage was found and needs to be updated
+        if (ongoingOutage) {
           const outageLength = currentTime - ongoingOutage.outage_start_datetime;
           await Outage.updateOne(
             { _id: ongoingOutage._id },
