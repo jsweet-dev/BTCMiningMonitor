@@ -77,7 +77,7 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
     },
     {
       $group: {
-        _id: '$worker_name',
+        workerName: '$worker_name',
         miningUserName: { $first: '$mining_user_name' },
         host: { $first: '$host' },
         lastShare: { $max: '$last_share_at' },
