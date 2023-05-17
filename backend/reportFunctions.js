@@ -3,9 +3,12 @@ const { getMinerStatistics, logMsg } = require('./dbFunctions');
 const { JSDOM } = require('jsdom');
 const { createCanvas } = require('canvas');
 const fs = require('fs');
+const path = require('path');
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
+const { saveChartToFile } = require('./generateOutageChart');
+const { log } = require('console');
 
 const formatDateTime = (date, dateOnly = true) => {
     // logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`);
@@ -42,117 +45,148 @@ const aggregateDataByWorker = (data) => {
     return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
 };
 
-const getOption = (worker) => {
-    worker = worker[0];
-    // logMsg("worker= ", JSON.stringify(worker))
-    return ({
-        title: {
-            text: `${worker._id}`,
-            left: 'center',
-        },
-        xAxis: {
-            type: 'time',
-        },
-        yAxis: [
-            {
-                type: 'value',
-                name: 'Hash Rate ( TH/s )',
-                nameLocation: 'middle',
-                nameGap: 30,
-                nameTextStyle: {
-                    fontWeight: 'bold',
-                },
-                axisLabel: {
-                    margin: 1,
-                    formatter: (value) => `${value}`,
-                },
-                min: 0,
-                max: 160
-            },
-            {
-                type: 'value',
-                name: 'Status',
-                nameLocation: 'middle',
-                nameGap: 30,
-                nameTextStyle: {
-                    fontWeight: 'bold',
-                },
-                axisLabel: {
-                    formatter: (value) => (value === 0 ? 'Down' : value === 1 ? 'Up' : ''),
-                },
-            },
-        ],
-        series: [
-            {
-                data: worker.history.map((entry) => [
-                    entry.timestamp,
-                    entry.hashRate,
-                ]),
-                type: 'line',
-                symbol: 'none',
-                name: 'Hash Rate',
-                yAxisIndex: 0,
-                connectNulls: false,
-                large: true,
-                largeThreshold: 3000,
-            },
-            {
-                data: worker.history.map((entry) => [entry.timestamp, entry.hashRate ? 1 : 0]),
-                type: 'scatter',
-                name: 'Status',
-                symbolSize: 10,
-                itemStyle: {
-                    color: (params) => {
-                        return params.data[1] === 0 ? 'red' : 'green';
-                    },
-                },
-                yAxisIndex: 1,
-                connectNulls: false,
-                large: true,
-                largeThreshold: 3000,
-            },
-        ],
-    });
-};
+// const getOption = (worker) => {
+//     worker = worker[0];
+//     // logMsg("worker= ", JSON.stringify(worker))
+//     return ({
+//         title: {
+//             text: `${worker._id}`,
+//             left: 'center',
+//         },
+//         xAxis: {
+//             type: 'time',
+//         },
+//         yAxis: [
+//             {
+//                 type: 'value',
+//                 name: 'Hash Rate ( TH/s )',
+//                 nameLocation: 'middle',
+//                 nameGap: 30,
+//                 nameTextStyle: {
+//                     fontWeight: 'bold',
+//                 },
+//                 axisLabel: {
+//                     margin: 1,
+//                     formatter: (value) => `${value}`,
+//                 },
+//                 min: 0,
+//                 max: 160
+//             },
+//             {
+//                 type: 'value',
+//                 name: 'Status',
+//                 nameLocation: 'middle',
+//                 nameGap: 30,
+//                 nameTextStyle: {
+//                     fontWeight: 'bold',
+//                 },
+//                 axisLabel: {
+//                     formatter: (value) => (value === 0 ? 'Down' : value === 1 ? 'Up' : ''),
+//                 },
+//             },
+//         ],
+//         series: [
+//             {
+//                 data: worker.history.map((entry) => [
+//                     entry.timestamp,
+//                     entry.hashRate,
+//                 ]),
+//                 type: 'line',
+//                 symbol: 'none',
+//                 name: 'Hash Rate',
+//                 yAxisIndex: 0,
+//                 connectNulls: false,
+//                 large: true,
+//                 largeThreshold: 3000,
+//             },
+//             {
+//                 data: worker.history.map((entry) => [entry.timestamp, entry.hashRate ? 1 : 0]),
+//                 type: 'scatter',
+//                 name: 'Status',
+//                 symbolSize: 10,
+//                 itemStyle: {
+//                     color: (params) => {
+//                         return params.data[1] === 0 ? 'red' : 'green';
+//                     },
+//                 },
+//                 yAxisIndex: 1,
+//                 connectNulls: false,
+//                 large: true,
+//                 largeThreshold: 3000,
+//             },
+//         ],
+//     });
+// };
 
-const getWorkerData = async function fetchWorkers(outageInfo) {
-    // logMsg("Fetching worker data");
-    const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
-    const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
-    const workerName = outageInfo.worker_name;
+// const getWorkerData = async function fetchWorkers(outageInfo) {
+//     // logMsg("Fetching worker data");
+//     const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
+//     const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
+//     const workerName = outageInfo.worker_name;
 
-    const workerData = await getMinerStatistics("", workerName, "", startTime, endTime, "");
+//     const workerData = await getMinerStatistics("", workerName, "", startTime, endTime, "");
 
-    return workerData;
-};
+//     return workerData;
+// };
 
-async function generateChart(outage) {
-    // Create a virtual DOM environment for jspdf.addSvgAsImage
-    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-        pretendToBeVisual: true, // Required for canvas
-    });
+// async function generateChart(outage) {
+//     // Create a virtual DOM environment for jspdf.addSvgAsImage
+//     const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+//         pretendToBeVisual: true, // Required for canvas
+//     });
 
-    const workerData = await getWorkerData(outage);
-    // logMsg("workerData= ", JSON.stringify(workerData))
+//     const workerData = await getWorkerData(outage);
+//     // logMsg("workerData= ", JSON.stringify(workerData))
 
-    echarts.setPlatformAPI({ canvas: createCanvas });
-    const canvas = createCanvas(500, 250);
-    const chart = echarts.init(canvas);
+//     echarts.setPlatformAPI({ canvas: createCanvas });
+//     const canvas = createCanvas(500, 250);
+//     const chart = echarts.init(canvas);
 
 
-    const options = getOption(workerData);
-    options.backgroundColor = '#FFFFFF';
-    chart.setOption(options);
-    let chartImg = canvas.toDataURL();
+//     const options = getOption(workerData);
+//     options.backgroundColor = '#FFFFFF';
+//     chart.setOption(options);
+//     let chartImg = canvas.toDataURL();
 
-    // Clean up globalThis variables
-    echarts.dispose(chart);
+//     // Clean up globalThis variables
+//     echarts.dispose(chart);
 
-    return chartImg;
+//     return chartImg;
+// };
+
+const placeholderImagePath = path.join(__dirname, 'placeholder.png');
+
+const fetchChart = async (outage) => {
+    logMsg(`fetchChart called for outage ${JSON.stringify(outage)}`);
+    const chartFilePath = `${process.env.CHARTS_DIR}/${outage._id}.png`;
+
+    if (fs.existsSync(chartFilePath)) {
+        logMsg(`Chart file exists, reading chart for outage ${outage._id}`);
+        // Chart file exists, read and convert to base64-encoded string
+        const chartData = fs.readFileSync(chartFilePath, 'base64');
+        return `data:image/png;base64,${chartData}`;
+    } else {
+        try {
+            logMsg(`Chart file does not exist, fetching chart for outage ${outage._id}`);
+            const chartPath = await saveChartToFile(outage);
+            if (chartPath.path) {
+                logMsg(`Chart created at ${chartPath.path}`);
+                // Got a chart or placeholder
+                const chartData = fs.readFileSync(chartPath.path, 'base64');
+                return `data:image/png;base64,${chartData}`;
+            } else {
+                //empty 5x5 png to prevent error from pdfMake
+                return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAADElEQVQImWNgoBMAAABpAAFEI8ARAAAAAElFTkSuQmCC`;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
 };
 
 const getTableData = (data) => {
     return data.map((entry) => ({
+        _id: entry._id,
         worker_name: entry.worker_name,
         outage_start_datetime: entry.outage_start_datetime,
         outage_end_datetime: entry.outage_end_datetime,
@@ -219,8 +253,7 @@ const generateFirstPage = (tableData, searchTerm) => {
     const { reportPeriodStart, reportPeriodEnd, reportGeneratedAt } = getReportDates(searchTerm);
     const aggregatedTableData = aggregateDataByWorker(tableData);
     const { outageCount, totalOutageLength } = getOutageStats(tableData);
-    return(
-    [
+    return ([
         {
             text: `Outages`,
             style: 'header'
@@ -230,38 +263,45 @@ const generateFirstPage = (tableData, searchTerm) => {
             style: 'header2'
         },
         {
-            table: {
-                style: 'summaryTable',
-                headerRows: 1,
-                widths: ['33%', '33%', '33%'],
-                body: [
-                    [
-                        { text: 'Worker Name', style: 'tableHeader' },
-                        { text: 'Outages', style: 'tableHeader' },
-                        { text: 'Total Downtime', style: 'tableHeader' },
-                    ],
-                    ...aggregatedTableData.map((entry) => ([
-                        entry.worker_name,
-                        entry.outages,
-                        entry.total_downtime,
-                    ])),
-                    ["Totals", ` ${outageCount}`, `${totalOutageLength.toFixed(2)} hrs`]
-                ]
-            },
-            layout: 'summaryTable',
+            columns: [
+                { width: '*', text: '' },
+                {
+                    width: 'auto',
+                    style: 'summaryTable',
+                    table: {
+                        headerRows: 1,
+                        widths: [150, 150, 150],
+                        body: [
+                            [
+                                { text: 'Worker Name', style: 'tableHeader' },
+                                { text: 'Outages', style: 'tableHeader' },
+                                { text: 'Total Downtime', style: 'tableHeader' },
+                            ],
+                            ...aggregatedTableData.map((entry) => ([
+                                entry.worker_name,
+                                entry.outages,
+                                entry.total_downtime,
+                            ])),
+                            ["Totals", ` ${outageCount}`, `${totalOutageLength.toFixed(2)} hrs`]
+                        ],
+                    },
+                    layout: 'summaryTable',
+                },
+                { width: '*', text: '' },
+            ],
         },
-    ]
-    );
+    ]);
 };
 
 const createDD = (content) => {
     return ({
+        pageSize: 'LETTER',
         content: content,
         footer: function (currentPage, pageCount) {
             return [
-                { 
+                {
                     style: 'footer',
-                    text: currentPage.toString() + ' of ' + pageCount, alignment: (currentPage % 2) ? 'left' : 'right' 
+                    text: currentPage.toString() + ' of ' + pageCount, alignment: (currentPage % 2) ? 'left' : 'right'
                 }
             ]
         },
@@ -303,98 +343,117 @@ const generatePDF = async (data, searchTerm) => {
     try {
         const tableData = getTableData(data);
         const tableLayouts = getTableLayouts();
-        
+
         const content = generateFirstPage(tableData, searchTerm);
         content.push([
             {
                 pageBreak: 'before',
-                style: 'summaryTable',
-                table: {
-                    headerRows: 1,
-                    body: [
-                        // Table headers
-                        [
-                            { text: 'Worker Name', style: 'tableHeader' },
-                            { text: 'Outage Start', style: 'tableHeader' },
-                            { text: 'Outage End', style: 'tableHeader' },
-                            { text: 'Outage Length', style: 'tableHeader' },
-                        ],
-                        // Table data
-                        ...tableData.map((outage) => ([
-                            outage.worker_name,
-                            formatDateTime(outage.outage_start_datetime, false),
-                            formatDateTime(outage.outage_end_datetime, false),
-                            outage.outage_length,
-                        ])),
-                    ]
-                },
-                layout: 'summaryTable',
+                columns: [
+                    { width: '*', text: '' },
+                    {
+                        width: 'auto',
+                        style: 'summaryTable',
+                        table: {
+                            headerRows: 1,
+                            body: [
+                                // Table headers
+                                [
+                                    { text: 'Worker Name', style: 'tableHeader' },
+                                    { text: 'Outage Start', style: 'tableHeader' },
+                                    { text: 'Outage End', style: 'tableHeader' },
+                                    { text: 'Outage Length', style: 'tableHeader' },
+                                ],
+                                // Table data
+                                ...tableData.map((outage) => ([
+                                    outage.worker_name,
+                                    formatDateTime(outage.outage_start_datetime, false),
+                                    outage.outage_end_datetime ? formatDateTime(outage.outage_end_datetime, false) : 'Ongoing',
+                                    outage.outage_length,
+                                ])),
+                            ]
+                        },
+                        layout: 'summaryTable',
+                    },
+                    { width: '*', text: '' },
+                ],
             }
         ]);
-        
+
 
         const docDefinition = createDD(content);
 
         pdfMake.tableLayouts = tableLayouts;
+        // logMsg(`docDefinition = ${JSON.stringify(docDefinition)}`)
         const pdfDoc = pdfMake.createPdf(docDefinition);
 
         const pdfBlob = await new Promise((resolve, reject) => {
             pdfDoc.getBuffer((buffer) => {
-                
+
                 resolve(buffer);
             });
         });
         return pdfBlob;
-        
+
     } catch (error) {
         logMsg(error);
     }
 };
 
 const generateDetailedPDF = async (data, searchTerm) => {
+    logMsg(`Generating detailed PDF, got data: ${JSON.stringify(data)}`);
     try {
         const tableData = getTableData(data);
         const tableLayouts = getTableLayouts();
-        
+
         const content = generateFirstPage(tableData, searchTerm);
         const chartPromises = tableData.map(async (outage, index) => {
             // logMsg(`Outage = ${JSON.stringify(outage)} and index = ${index}`);
-            const chartImg = await generateChart(outage); // Replace with an appropriate implementation
-            
+            const chartImg = await fetchChart(outage); // Replace with an appropriate implementation
+
             const outagePageContent = [
                 // { text: 'Outage Details', fontSize: 16, margin: [40, 40, 0, 0], pageBreak: index === 0 ? 'after' : 'before' },
                 {
                     pageBreak: 'before',
-                    style: 'summaryTable',
-                    table: {
-                        headerRows: 1,
-                        body: [
-                            // Table headers
-                            [
-                                { text: 'Worker Name', style: 'tableHeader' },
-                                { text: 'Outage Start', style: 'tableHeader' },
-                                { text: 'Outage End', style: 'tableHeader' },
-                                { text: 'Outage Length', style: 'tableHeader' },
-                            ],
-                            // Table data
-                            [
-                                outage.worker_name,
-                                formatDateTime(outage.outage_start_datetime, false),
-                                formatDateTime(outage.outage_end_datetime, false),
-                                outage.outage_length,
-                            ],
-                        ],
-                    },
-                    layout: 'summaryTable',
+                    columns: [
+                        { width: '*', text: '' },
+                        {
+                            width: 'auto',
+                            style: 'summaryTable',
+                            table: {
+                                headerRows: 1,
+                                body: [
+                                    // Table headers
+                                    [
+                                        { text: 'Worker Name', style: 'tableHeader' },
+                                        { text: 'Outage Start', style: 'tableHeader' },
+                                        { text: 'Outage End', style: 'tableHeader' },
+                                        { text: 'Outage Length', style: 'tableHeader' },
+                                    ],
+                                    // Table data
+                                    [
+                                        outage.worker_name,
+                                        formatDateTime(outage.outage_start_datetime, false),
+                                        outage.outage_end_datetime ? formatDateTime(outage.outage_end_datetime, false) : 'Ongoing',
+                                        outage.outage_length,
+                                    ],
+                                ],
+                            },
+                            layout: 'summaryTable',
+                        },
+                        { width: '*', text: '' },
+                    ],
                 },
                 {
-                    text: `Worker Name: ${outage.worker_name}`,
-                    style: 'subheader'
+                    columns: [
+                        { width: '*', text: '' },
+                        {
+                            width: 500,
+                            image: chartImg, // If chartImg is a data URL for the chart image
+                        },
+                        { width: '*', text: '' },
+                    ],
                 },
-                {
-                    image: chartImg // If chartImg is a data URL for the chart image
-                }
-            ];         
+            ];
 
             // Add screenshots
             const screenshotColumns = Array(4).fill().map(() => ({ stack: [], margin: [0, 0, 0, 10] }));
@@ -425,10 +484,13 @@ const generateDetailedPDF = async (data, searchTerm) => {
         const docDefinition = createDD(content);
 
         pdfMake.tableLayouts = tableLayouts;
+
+        logMsg(`PDF doc definition: ${JSON.stringify(docDefinition)}`);
+
         const pdfDoc = pdfMake.createPdf(docDefinition);
         const pdfBlob = await new Promise((resolve, reject) => {
             pdfDoc.getBuffer((buffer) => {
-                
+
                 resolve(buffer);
             });
         });
