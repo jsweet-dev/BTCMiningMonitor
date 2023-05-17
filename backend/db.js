@@ -38,7 +38,7 @@ const Outage = mongoose.model('Outage', outageSchema);
 const connectDb = async (caller = '') => {
   // console.log(`Attempting connection to MongoDB ${caller !== '' ? "for " + caller : ''}...`);
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_DEV_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
     // console.log('MongoDB connected');
     // console.log('');
     return conn;
@@ -54,4 +54,5 @@ module.exports = {
   Worker,
   MinerStatus,
   Outage,
+  ObjectId: mongoose.Types.ObjectId,
 };
