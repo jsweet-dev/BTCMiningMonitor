@@ -1,9 +1,10 @@
-const { connectDb, getDb, Worker, Outage, MinerStatus } = require('./db');
+const { log } = require('console');
+const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
 const fs = require('fs');
 const path = require('path');
 
 const logMsg = (msg) => {
-  console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
+  //console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
 }
 
 async function saveMinerStatus(minerStatus) {
@@ -12,13 +13,14 @@ async function saveMinerStatus(minerStatus) {
   await db.collection('minerStatus').insertOne(minerStatus);
 }
 
-async function getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName) {
+async function getMinerStatistics(host = null, workerName = null, status = null, startTime = null, endTime = null, miningUserName = null) {
+  logMsg(`getMinerStatistics(${host}, ${workerName}, ${status}, ${startTime}, ${endTime}, ${miningUserName})`);
   await connectDb('getMinerStatistics');
   const db = getDb();
   const matchStage = {
     $match: {},
   };
-  
+
   if (workerName) {
     matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
   }
@@ -36,9 +38,10 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
   const start = startTime ? parseInt(startTime) : currentTime - 24 * 60 * 60 * 1000;
   // Use endTime if provided, otherwise default to the current time
   const end = endTime ? parseInt(endTime) : currentTime;
-  
+
   matchStage.$match.timestamp = { $gte: start, $lte: end };
-  
+
+  logMsg(`matchStage: ${JSON.stringify(matchStage)}`);
   const pipeline = [
     {
       $lookup: {
@@ -105,31 +108,110 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
       },
     },
   ];
-
+  logMsg(`pipeline: ${JSON.stringify(pipeline)}`);
   const statistics = await db.collection('workers').aggregate(pipeline).toArray();
   return statistics;
 }
 
-async function getOutages(startTime, endTime) {
-  //logMsg("Getting outages");
-  await connectDb('getOutages');
+// async function getOutages(startTime, endTime) {
+//   //logMsg("Getting outages");
+//   await connectDb('getOutages');
+//   const db = getDb();
+//   //logMsg("Connected to DB for outages");
+//   const query = { };
+//   if(startTime) {
+//     query.outage_start_datetime = { $gte: startTime };
+//   }
+//   if(endTime) {
+//     query.$or = [
+//       {
+//         outage_end_datetime: { $lte: endTime}
+//       }, 
+//       {
+//         outage_end_datetime: null
+//       }
+//     ];
+//   }
+//   // logMsg("Query: ", JSON.stringify(query));
+
+//   const pipeline = [
+//     {
+//       $match: query
+//     },
+//     {
+//       $addFields: {
+//         is_end_date_null: { $eq: ['$outage_end_datetime', null] }
+//       }
+//     },
+//     {
+//       $sort: {
+//         is_end_date_null: -1,
+//         outage_start_datetime: -1,
+//       }
+//     },
+//     {
+//       $project: {
+//         is_end_date_null: 0
+//       }
+//     }
+//   ];
+
+//   const outages = await db.collection('outages')
+//     .aggregate(pipeline)
+//     .toArray();
+
+//   const screenshotsDir = '/app/screenshots/'
+//   const screenshotFiles = fs.readdirSync(screenshotsDir);
+//   // logMsg("screenshot files: ", screenshotFiles);
+
+// // Add screenshot filenames to each outage object
+//   for (const outage of outages) {
+//     // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
+//     const outageStart = outage.outage_start_datetime;
+//     const outageEnd = outage.outage_end_datetime ? outage.outage_end_datetime : new Date().getTime();
+//     // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
+//     const outageScreenshots = screenshotFiles.filter(file => {
+//       const timestamp = parseInt(path.basename(file, '.png'));
+//       return timestamp >= outageStart && timestamp <= outageEnd;
+//     });
+//     // logMsg("outageScreenshots: ", outageScreenshots);
+//     outage.screenshots = outageScreenshots;
+//   }
+
+//   // logMsg("Outages: ", outages);
+//   return outages;
+// }
+
+async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null) {
+  logMsg("Getting outages");
+  await connectDb('getOutages (generateOutageChart.js)');
   const db = getDb();
-  //logMsg("Connected to DB for outages");
-  const query = { };
-  if(startTime) {
+  logMsg("Connected to DB for outages");
+  const query = {};
+  if (id) {
+    console.log("id: ", id);
+    query._id = { $eq: new ObjectId(id) }
+  }
+  if (workerName) {
+    matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
+  }
+  if (miningUserName) {
+    matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
+  } if (startTime) {
     query.outage_start_datetime = { $gte: startTime };
   }
-  if(endTime) {
+  if (endTime) {
     query.$or = [
       {
-        outage_end_datetime: { $lte: endTime}
-      }, 
+        outage_end_datetime: { $lte: endTime }
+      },
       {
         outage_end_datetime: null
       }
     ];
   }
-  // logMsg("Query: ", JSON.stringify(query));
+
+  logMsg(`Query: ${JSON.stringify(query)}`);
 
   const pipeline = [
     {
@@ -153,6 +235,8 @@ async function getOutages(startTime, endTime) {
     }
   ];
 
+  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`);
+
   const outages = await db.collection('outages')
     .aggregate(pipeline)
     .toArray();
@@ -161,7 +245,7 @@ async function getOutages(startTime, endTime) {
   const screenshotFiles = fs.readdirSync(screenshotsDir);
   // logMsg("screenshot files: ", screenshotFiles);
 
-// Add screenshot filenames to each outage object
+  // Add screenshot filenames to each outage object
   for (const outage of outages) {
     // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
     const outageStart = outage.outage_start_datetime;
@@ -175,11 +259,19 @@ async function getOutages(startTime, endTime) {
     outage.screenshots = outageScreenshots;
   }
 
-  // logMsg("Outages: ", outages);
-  return outages;
+  logMsg(`Outages: ${JSON.stringify(outages)}`);
+  if (outages.length > 1) {
+    return outages;
+  } else {
+    return outages[0];
+  }
 }
 
+
 async function getStatus(statusValue) {
+  if (!typeof statusValue === 'number') {
+    throw new Error(`getStatus: statusValue must be a number. Got ${typeof statusValue}`);
+  }
   if (statusValue === 0) {
     return "down";
   } else if (statusValue >= 1 && statusValue <= 50) {
@@ -194,7 +286,7 @@ async function updateStatus(userWorkerData) {
   const db = getDb();
 
   for (const user of userWorkerData) {
-    if(!user.workers) continue;
+    if (!user.workers) continue;
     for (const worker of user.workers) {
       const workerStatus = {
         worker_name: worker.hash_rate_info.name,
@@ -211,9 +303,9 @@ async function updateStatus(userWorkerData) {
 
 function getMiningUserName(worker_name) {
   if (/^\d/.test(worker_name)) {
-    return process.env.MINING_USER_NAME_1; 
+    return process.env.MINING_USER_NAME_1;
   } else {
-    return process.env.MINING_USER_NAME_2; 
+    return process.env.MINING_USER_NAME_2;
   }
 }
 
@@ -249,7 +341,7 @@ async function updateOutages(userWorkerData) {
           outage_end_datetime: null,
         });
 
-        if (ongoingOutage) {
+        if (ongoingOutage) { //If there is an ongoing outage, update the end time and outage length because the worker is back online
           const outageLength = currentTime - ongoingOutage.outage_start_datetime;
           await Outage.updateOne(
             { _id: ongoingOutage._id },
@@ -260,6 +352,9 @@ async function updateOutages(userWorkerData) {
               },
             }
           );
+          // setTimeout(() => {
+          //   saveChartToFile(ongoingOutage._id);
+          // }, 10 * 60 * 1000); //Save the chart 10 minutes after the outage ends
         }
       }
     }
@@ -320,42 +415,42 @@ async function saveWorkerData(workerData) {
   await connectDb('saveWorkerData');
 
   // logMsg('Saving worker data:', workerData);
-    const promises = workerData.map(async (user) => {
-      const { workers, ...userData } = user;
-      if(!workers) return;
-      return Promise.all(
-          workers.map((worker) => {
-            return (
-                new Worker(
-                  // { worker_name: worker.hash_rate_info.name },
-                  {
-                    mining_user_name: userData.mining_user_name,
-                    worker_name: worker.hash_rate_info.name,
-                    last_share_at: worker.last_share_at,
-                    status: worker.status, //0 === Online, 1 === Offline, 2 === Expired
-                    host: worker.host,
-                    hash_rate: worker.hash_rate_info.hash_rate,
-                    timestamp: Date.now(),
-                  }
-                ).save()
-            );
-          }
-        )
-      );
-    });
-    
-    const event = new Date(Date.now());
-    await Promise.all(promises)
+  const promises = workerData.map(async (user) => {
+    const { workers, ...userData } = user;
+    if (!workers) return;
+    return Promise.all(
+      workers.map((worker) => {
+        return (
+          new Worker(
+            // { worker_name: worker.hash_rate_info.name },
+            {
+              mining_user_name: userData.mining_user_name,
+              worker_name: worker.hash_rate_info.name,
+              last_share_at: worker.last_share_at,
+              status: worker.status, //0 === Online, 1 === Offline, 2 === Expired
+              host: worker.host,
+              hash_rate: worker.hash_rate_info.hash_rate,
+              timestamp: Date.now(),
+            }
+          ).save()
+        );
+      }
+      )
+    );
+  });
+
+  const event = new Date(Date.now());
+  await Promise.all(promises)
     .then(logMsg("Saving worker data"))
     .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`));
 }
 
-module.exports = { 
-  saveMinerStatus, 
-  getMinerStatistics, 
-  saveWorkerData, 
-  updateStatus, 
-  updateOutages, 
+module.exports = {
+  saveMinerStatus,
+  getMinerStatistics,
+  saveWorkerData,
+  updateStatus,
+  updateOutages,
   getOutages,
-  logMsg 
+  logMsg
 };
