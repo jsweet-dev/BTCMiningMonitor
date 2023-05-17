@@ -12,15 +12,14 @@ process.on('message', async (data) => {
         logMsg(`Child Spawned for ${type} report. Job ID: ${jobId}`);
         const startTime = new Date(searchTerm.dateRange.startDate).getTime();
         const endTime = new Date(searchTerm.dateRange.endDate).getTime();
+        const outages = await getOutages(startTime, endTime);
 
         try {
             let pdfBlob;
             if (type === 'detailed') {
                 logMsg("Generating detailed PDF")
-                const outages = await getOutages(startTime, endTime);
                 pdfBlob = await generateDetailedPDF(outages, searchTerm);
             } else if (type === 'summary') {
-                const outages = await getOutages(startTime, endTime);
                 pdfBlob = await generatePDF(outages, searchTerm);
             }
             logMsg("Finished generating PDF");
