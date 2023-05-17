@@ -5,7 +5,7 @@ const path = require('path');
 const debugLevel = 7;
 
 const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
-  if (msgLevel >= logLevel){
+  if (msgLevel <= logLevel){
     console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
   }
 }
