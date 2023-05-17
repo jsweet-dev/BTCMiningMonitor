@@ -11,7 +11,7 @@ const { saveChartToFile } = require('./generateOutageChart');
 const { log } = require('console');
 
 const formatDateTime = (date, dateOnly = true) => {
-    // logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`);
+    logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`, 7);
     let retVal = "";
 
     retVal = new Date(date)
@@ -23,12 +23,12 @@ const formatDateTime = (date, dateOnly = true) => {
         : retVal.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4}), (\d{1,2}:\d{1,2}:\d{1,2}) (AM|PM)/, (match, month, day, year, time, ampm) => {
             return `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${time} ${ampm}`;
         });
-    // logMsg(`formatDateTime returning: ${retVal}`)
+    logMsg(`formatDateTime returning: ${retVal}`, 7)
     return retVal;
 };
 
 const aggregateDataByWorker = (data) => {
-    // logMsg("Aggregating data by worker", data);
+    logMsg(`Aggregating data by worker: ${data}`, 8);
     const aggregatedData = data.reduce((acc, curr) => {
         if (!acc[curr.worker_name]) {
             acc[curr.worker_name] = {
@@ -41,136 +41,27 @@ const aggregateDataByWorker = (data) => {
         acc[curr.worker_name].total_downtime += parseFloat(curr.outage_length);
         return acc;
     }, {});
-    // logMsg("Aggregated data", aggregatedData);
+    logMsg(`Aggregated data ${aggregatedData}`, 8);
     return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
 };
-
-// const getOption = (worker) => {
-//     worker = worker[0];
-//     // logMsg("worker= ", JSON.stringify(worker))
-//     return ({
-//         title: {
-//             text: `${worker._id}`,
-//             left: 'center',
-//         },
-//         xAxis: {
-//             type: 'time',
-//         },
-//         yAxis: [
-//             {
-//                 type: 'value',
-//                 name: 'Hash Rate ( TH/s )',
-//                 nameLocation: 'middle',
-//                 nameGap: 30,
-//                 nameTextStyle: {
-//                     fontWeight: 'bold',
-//                 },
-//                 axisLabel: {
-//                     margin: 1,
-//                     formatter: (value) => `${value}`,
-//                 },
-//                 min: 0,
-//                 max: 160
-//             },
-//             {
-//                 type: 'value',
-//                 name: 'Status',
-//                 nameLocation: 'middle',
-//                 nameGap: 30,
-//                 nameTextStyle: {
-//                     fontWeight: 'bold',
-//                 },
-//                 axisLabel: {
-//                     formatter: (value) => (value === 0 ? 'Down' : value === 1 ? 'Up' : ''),
-//                 },
-//             },
-//         ],
-//         series: [
-//             {
-//                 data: worker.history.map((entry) => [
-//                     entry.timestamp,
-//                     entry.hashRate,
-//                 ]),
-//                 type: 'line',
-//                 symbol: 'none',
-//                 name: 'Hash Rate',
-//                 yAxisIndex: 0,
-//                 connectNulls: false,
-//                 large: true,
-//                 largeThreshold: 3000,
-//             },
-//             {
-//                 data: worker.history.map((entry) => [entry.timestamp, entry.hashRate ? 1 : 0]),
-//                 type: 'scatter',
-//                 name: 'Status',
-//                 symbolSize: 10,
-//                 itemStyle: {
-//                     color: (params) => {
-//                         return params.data[1] === 0 ? 'red' : 'green';
-//                     },
-//                 },
-//                 yAxisIndex: 1,
-//                 connectNulls: false,
-//                 large: true,
-//                 largeThreshold: 3000,
-//             },
-//         ],
-//     });
-// };
-
-// const getWorkerData = async function fetchWorkers(outageInfo) {
-//     // logMsg("Fetching worker data");
-//     const startTime = outageInfo.outage_start_datetime - (outageInfo.outage_start_datetime * 0.000001);
-//     const endTime = outageInfo.outage_end_datetime + (outageInfo.outage_end_datetime * 0.000001);
-//     const workerName = outageInfo.worker_name;
-
-//     const workerData = await getMinerStatistics("", workerName, "", startTime, endTime, "");
-
-//     return workerData;
-// };
-
-// async function generateChart(outage) {
-//     // Create a virtual DOM environment for jspdf.addSvgAsImage
-//     const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-//         pretendToBeVisual: true, // Required for canvas
-//     });
-
-//     const workerData = await getWorkerData(outage);
-//     // logMsg("workerData= ", JSON.stringify(workerData))
-
-//     echarts.setPlatformAPI({ canvas: createCanvas });
-//     const canvas = createCanvas(500, 250);
-//     const chart = echarts.init(canvas);
-
-
-//     const options = getOption(workerData);
-//     options.backgroundColor = '#FFFFFF';
-//     chart.setOption(options);
-//     let chartImg = canvas.toDataURL();
-
-//     // Clean up globalThis variables
-//     echarts.dispose(chart);
-
-//     return chartImg;
-// };
 
 const placeholderImagePath = path.join(__dirname, 'placeholder.png');
 
 const fetchChart = async (outage) => {
-    logMsg(`fetchChart called for outage ${JSON.stringify(outage)}`);
+    logMsg(`fetchChart called for outage ${JSON.stringify(outage)}`, 6);
     const chartFilePath = `${process.env.CHARTS_DIR}/${outage._id}.png`;
 
     if (fs.existsSync(chartFilePath)) {
-        logMsg(`Chart file exists, reading chart for outage ${outage._id}`);
+        logMsg(`Chart file exists, reading chart for outage ${outage._id}`, 6);
         // Chart file exists, read and convert to base64-encoded string
         const chartData = fs.readFileSync(chartFilePath, 'base64');
         return `data:image/png;base64,${chartData}`;
     } else {
         try {
-            logMsg(`Chart file does not exist, fetching chart for outage ${outage._id}`);
+            logMsg(`Chart file does not exist, fetching chart for outage ${outage._id}`, 6);
             const chartPath = await saveChartToFile(outage);
             if (chartPath.path) {
-                logMsg(`Chart created at ${chartPath.path}`);
+                logMsg(`Chart created at ${chartPath.path}`, 6);
                 // Got a chart or placeholder
                 const chartData = fs.readFileSync(chartPath.path, 'base64');
                 return `data:image/png;base64,${chartData}`;
@@ -179,7 +70,7 @@ const fetchChart = async (outage) => {
                 return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAADElEQVQImWNgoBMAAABpAAFEI8ARAAAAAElFTkSuQmCC`;
             }
         } catch (error) {
-            console.log(error);
+            logMsg(error.message, 1);
         }
     }
 };
@@ -383,7 +274,7 @@ const generatePDF = async (data, searchTerm) => {
         const docDefinition = createDD(content);
 
         pdfMake.tableLayouts = tableLayouts;
-        // logMsg(`docDefinition = ${JSON.stringify(docDefinition)}`)
+        logMsg(`docDefinition = ${JSON.stringify(docDefinition)}`, 8)
         const pdfDoc = pdfMake.createPdf(docDefinition);
 
         const pdfBlob = await new Promise((resolve, reject) => {
@@ -395,19 +286,20 @@ const generatePDF = async (data, searchTerm) => {
         return pdfBlob;
 
     } catch (error) {
-        logMsg(error);
+        logMsg(error.message, 1);
     }
 };
 
 const generateDetailedPDF = async (data, searchTerm) => {
-    logMsg(`Generating detailed PDF, got data: ${JSON.stringify(data)}`);
+    logMsg(`Generating detailed PDF`, 4);
+    logMsg(`Using data: ${JSON.stringify(data)}`, 8);
     try {
         const tableData = getTableData(data);
         const tableLayouts = getTableLayouts();
 
         const content = generateFirstPage(tableData, searchTerm);
         const chartPromises = tableData.map(async (outage, index) => {
-            // logMsg(`Outage = ${JSON.stringify(outage)} and index = ${index}`);
+            logMsg(`Outage = ${JSON.stringify(outage)} and index = ${index}`, 8);
             const chartImg = await fetchChart(outage); // Replace with an appropriate implementation
 
             const outagePageContent = [
@@ -485,7 +377,7 @@ const generateDetailedPDF = async (data, searchTerm) => {
 
         pdfMake.tableLayouts = tableLayouts;
 
-        logMsg(`PDF doc definition: ${JSON.stringify(docDefinition)}`);
+        logMsg(`PDF doc definition: ${JSON.stringify(docDefinition)}`, 8);
 
         const pdfDoc = pdfMake.createPdf(docDefinition);
         const pdfBlob = await new Promise((resolve, reject) => {
@@ -496,7 +388,7 @@ const generateDetailedPDF = async (data, searchTerm) => {
         });
         return pdfBlob;
     } catch (error) {
-        logMsg(error);
+        logMsg(error.message, 1);
     }
 };
 
