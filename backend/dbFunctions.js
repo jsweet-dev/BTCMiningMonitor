@@ -2,9 +2,12 @@ const { log } = require('console');
 const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
 const fs = require('fs');
 const path = require('path');
+const debugLevel = 7;
 
-const logMsg = (msg) => {
-  //console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
+const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
+  if (msgLevel >= logLevel){
+    console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
+  }
 }
 
 async function saveMinerStatus(minerStatus) {
@@ -14,7 +17,7 @@ async function saveMinerStatus(minerStatus) {
 }
 
 async function getMinerStatistics(host = null, workerName = null, status = null, startTime = null, endTime = null, miningUserName = null) {
-  logMsg(`getMinerStatistics(${host}, ${workerName}, ${status}, ${startTime}, ${endTime}, ${miningUserName})`);
+  logMsg(`getMinerStatistics(${host}, ${workerName}, ${status}, ${startTime}, ${endTime}, ${miningUserName})`, 7);
   await connectDb('getMinerStatistics');
   const db = getDb();
   const matchStage = {
@@ -41,7 +44,7 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
 
   matchStage.$match.timestamp = { $gte: start, $lte: end };
 
-  logMsg(`matchStage: ${JSON.stringify(matchStage)}`);
+  logMsg(`matchStage: ${JSON.stringify(matchStage)}`, 8);
   const pipeline = [
     {
       $lookup: {
@@ -108,16 +111,16 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
       },
     },
   ];
-  logMsg(`pipeline: ${JSON.stringify(pipeline)}`);
+  logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 8);
   const statistics = await db.collection('workers').aggregate(pipeline).toArray();
   return statistics;
 }
 
 async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null) {
-  logMsg("Getting outages");
+  logMsg("Getting outages", 6);
   await connectDb('getOutages (generateOutageChart.js)');
   const db = getDb();
-  logMsg("Connected to DB for outages");
+  logMsg("Connected to DB for outages", 6);
   const query = {};
   if (id) {
     console.log("id: ", id);
@@ -142,7 +145,7 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
     ];
   }
 
-  logMsg(`Query: ${JSON.stringify(query)}`);
+  logMsg(`Query: ${JSON.stringify(query)}`, 8);
 
   const pipeline = [
     {
@@ -166,7 +169,7 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
     }
   ];
 
-  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`);
+  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`, 8);
 
   const outages = await db.collection('outages')
     .aggregate(pipeline)
@@ -174,23 +177,23 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
 
   const screenshotsDir = '/app/screenshots/'
   const screenshotFiles = fs.readdirSync(screenshotsDir);
-  // logMsg("screenshot files: ", screenshotFiles);
+  // logMsg("screenshot files: ", screenshotFiles, 7);
 
   // Add screenshot filenames to each outage object
   for (const outage of outages) {
-    // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
+    // logMsg("processing screenshots for outage: ", outage.outage_start_datetime, 7);
     const outageStart = outage.outage_start_datetime;
     const outageEnd = outage.outage_end_datetime ? outage.outage_end_datetime : new Date().getTime();
-    // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
+    // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`, 7);
     const outageScreenshots = screenshotFiles.filter(file => {
       const timestamp = parseInt(path.basename(file, '.png'));
       return timestamp >= outageStart && timestamp <= outageEnd;
     });
-    // logMsg("outageScreenshots: ", outageScreenshots);
+    // logMsg("outageScreenshots: ", outageScreenshots, 7);
     outage.screenshots = outageScreenshots;
   }
 
-  logMsg(`Outages: ${JSON.stringify(outages)}`);
+  logMsg(`Outages: ${JSON.stringify(outages)}`, 8);
   if (outages.length > 1) {
     return outages;
   } else {
@@ -292,7 +295,7 @@ async function updateOutages(userWorkerData) {
 async function saveWorkerData(workerData) {
   await connectDb('saveWorkerData');
 
-  // logMsg('Saving worker data:', workerData);
+  logMsg('Saving worker data:', workerData, 6);
   const promises = workerData.map(async (user) => {
     const { workers, ...userData } = user;
     if (!workers) return;
@@ -319,8 +322,8 @@ async function saveWorkerData(workerData) {
 
   const event = new Date(Date.now());
   await Promise.all(promises)
-    .then(logMsg("Saving worker data"))
-    .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`));
+    .then(logMsg("Saving worker data", 6))
+    .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`, 1));
 }
 
 module.exports = {

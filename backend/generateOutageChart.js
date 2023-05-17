@@ -15,7 +15,7 @@ const getOption = (worker, outage = {}) => {
     }
 
     worker = worker[0];
-    // logMsg("worker= ", JSON.stringify(worker))
+    logMsg(`worker= ${JSON.stringify(worker)}`, 8);
     return ({
         title: {
             text: `${worker._id}` +
@@ -101,29 +101,29 @@ const getOption = (worker, outage = {}) => {
 };
 
 const getWorkerData = async function fetchWorkers(outageInfo) {
-    logMsg("Fetching worker data");
+    logMsg("Fetching worker data", 6);
     const startTime = outageInfo.outage_start_datetime - (1200000);
     const endTime = (outageInfo.outage_end_datetime||(new Date()).getTime()) + (1200000);
     const workerName = outageInfo.worker_name;
 
     const workerData = await getMinerStatistics(null, workerName, null, startTime, endTime, null);
-    logMsg(`Got worker data: ${JSON.stringify(workerData)}`);
+    logMsg(`Got worker data: ${JSON.stringify(workerData)}`, 8);
     return workerData;
 };
 
 async function saveChartToFile(outage = null, outageId = null) {
-    logMsg(`Running saveChartToFile`);
+    logMsg(`Running saveChartToFile`, 4);
     if (!outageId && !outage) {
-        logMsg("No outageId provided");
+        logMsg("No outageId provided", 6);
         return;
     }
     if (!outage) {
-        logMsg(`Didn't get outage info, fetching from DB for outageId: ${outageId}`);
+        logMsg(`Didn't get outage info, fetching from DB for outageId: ${outageId}`, 6);
         outage = await getOutages(null, null, outageId);
     }
-    // logMsg(`Got outage info: ${JSON.stringify(outage)}`);
+    logMsg(`Got outage info: ${JSON.stringify(outage)}`, 8);
     const workerData = await getWorkerData(outage);
-    // logMsg(`workerData: ${JSON.stringify(workerData)}`)
+    logMsg(`workerData: ${JSON.stringify(workerData)}`, 8)
     const chart = echarts.init(null, null, {
         renderer: 'svg',
         ssr: true,
@@ -138,11 +138,11 @@ async function saveChartToFile(outage = null, outageId = null) {
     const svg = chart.renderToSVGString();
     const chartPath = `${process.env.CHARTS_DIR}/${outage._id}.png`;
     try {
-        logMsg(`Saving chart to ${chartPath}`);
+        logMsg(`Saving chart to ${chartPath}`, 6);
         await sharp(Buffer.from(svg), { density: 200 }).toFile(chartPath);
         return { path: chartPath, error: null };
     } catch (err) {
-        logMsg(err);
+        logMsg(err, 1);
         const placeholderPath = `${process.env.CHARTS_DIR}/placeholder.png`;
         if (!fs.existsSync(placeholderPath)) {
             try {
@@ -156,7 +156,7 @@ async function saveChartToFile(outage = null, outageId = null) {
                 await sharp(Buffer.from(placeholderSvg), { density: 200 }).toFile(placeholderPath);
                 return { path: placeholderPath, error: err.message };
             } catch (err) {
-                console.log("Error generating placeholder chart: ", err);
+                logMsg(`Error generating placeholder chart: ${err}`, 1);
             }
         } else {
             return { path: placeholderPath, error: err.message };
@@ -170,11 +170,11 @@ let count = 0;
 // new outage charts will be scheduled to generate using saveChartToFile by the polling.js script
 async function generateCharts() {
     const outages = await getOutages();
-    console.log("outages= ", outages.length)
-    // console.log("outage 1= ", outages[0]);
+    logMsg(`outages length = ${outages.length}`, 7)
+    logMsg(`outage 1 = ${outages[0]}`, 8);
     for (let outage of outages.slice(0, 10)) {
         count++;
-        console.log("Generating chart: ", count)
+        logMsg(`Generating chart: ${count}`, 7);
         await saveChartToFile(outage)
             .then((retVal) => {
                 console.log("retVal= ", retVal);
