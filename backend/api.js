@@ -10,9 +10,11 @@ router.post('/workers', async (req, res) => {
     logMsg("Post to /workers",4)
     const { host, status, startTime, endTime, workerName, miningUserName } = req.body;
     const workers = await getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName);
+    logMsg(`Sending response with ${workers.length} workers`, 1);
     res.json(workers);
   } catch (error) {
-    res.status(500).json({ message: 'Error retrieving workers', error: error });
+    logMsg(`Sending 500 repsonse for post to /workers: ${error.message}`, 1);
+    res.status(500).json({ message: 'Error retrieving workers', error: error.message });
   }
 });
 
@@ -21,8 +23,10 @@ router.post('/outages', async (req, res) => {
     logMsg("Post to /outages",4);
     const { startTime, endTime } = req.body;
     const outages = await getOutages(startTime, endTime);
+    logMsg(`Sending response with ${outages.length} outages`, 1);
     res.json(outages);
   } catch (error) {
+    logMsg(`Sending 500 repsonse for post to /outages: ${error.message}`, 1);
     res.status(500).json({ message: 'Error retrieving outages', error: error });
   }
 });
@@ -99,9 +103,11 @@ router.post('/reports/detailed', async (req, res) => {
       logMsg(`Too many jobs @ /reports/detailed`, 4)
       res.status(503).json({ message: 'Too many jobs in progress' });
     } else {
+      logMsg(`Sending response with jobId: ${jobId}`, 1);
       res.status(202).json({ jobId });
     }
   } catch (error) {
+    logMsg(`Sending error response: ${error}`, 1);
     res.status(500).json({ message: 'Error retrieving detailed report', error: error });
   }
 });
@@ -116,9 +122,11 @@ router.post('/reports/summary', async (req, res) => {
       logMsg(`Too many jobs @ /reports/summary`, 4)
       res.status(503).json({ message: 'Too many jobs in progress' });
     } else {
+      logMsg(`Sending response with jobId: ${jobId}`, 1);
       res.status(202).json({ jobId });
     }
   } catch (error) {
+    logMsg(`Sending error response: ${error}`, 1);
     res.status(500).json({ message: 'Error retrieving detailed report', error: error });
   }
 });
@@ -141,16 +149,19 @@ router.get('/reports/status/:jobId', (req, res) => {
   } else {
     const job = jobs.get(jobId);
     if (!job) {
+      logMsg(`Sending 404 response for jobId: ${jobId}`, 1);
       res.status(404).json({ message: 'Job not found' });
     } else if (job.status === 'completed') {
       pdfToSend = job.pdfBlob;
       logMsg("pdfToSend type: " + typeof pdfToSend + " length: " + pdfToSend.length, 7);
-      //logMsg("Sending PDF to client. Preview: " + pdfToSend.slice(0, 100) + "...", 7);
+      logMsg("Sending PDF to client.", 1);// Preview: " + pdfToSend.slice(0, 100) + "...", 7);
       jobs.delete(jobId);
         res.status(200).json(pdfToSend);
     } else if (job.status === 'processing') {
+      logMsg(`Sending 202 response for jobId: ${jobId}`, 1);
       res.status(202).json({ message: 'Report is being generated' });
     } else {
+      logMsg(`Sending 500 response for jobId: ${jobId}`, 1);
       res.status(500).json({ message: 'Error generating report', error: job.error });
     }
   }
