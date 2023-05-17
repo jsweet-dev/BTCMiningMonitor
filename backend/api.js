@@ -81,7 +81,7 @@ const processUsingChild = (type, searchTerm) => {
   } else {
     jobs.set(jobId, { status: 'waiting', searchTerm, type, pdfChunks: [], totalChunks: 0 });
     const child = fork(reportWorkerPath, [], {
-      execArgv: ['--max_old_space_size=512'], // Limit memory usage to 256 MB
+      execArgv: ['--max_old_space_size=2048'],
     });
     child.send({ type, searchTerm, jobId });
     const jobDetails = jobs.get(jobId);
