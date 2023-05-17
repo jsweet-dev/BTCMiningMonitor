@@ -113,75 +113,6 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
   return statistics;
 }
 
-// async function getOutages(startTime, endTime) {
-//   //logMsg("Getting outages");
-//   await connectDb('getOutages');
-//   const db = getDb();
-//   //logMsg("Connected to DB for outages");
-//   const query = { };
-//   if(startTime) {
-//     query.outage_start_datetime = { $gte: startTime };
-//   }
-//   if(endTime) {
-//     query.$or = [
-//       {
-//         outage_end_datetime: { $lte: endTime}
-//       }, 
-//       {
-//         outage_end_datetime: null
-//       }
-//     ];
-//   }
-//   // logMsg("Query: ", JSON.stringify(query));
-
-//   const pipeline = [
-//     {
-//       $match: query
-//     },
-//     {
-//       $addFields: {
-//         is_end_date_null: { $eq: ['$outage_end_datetime', null] }
-//       }
-//     },
-//     {
-//       $sort: {
-//         is_end_date_null: -1,
-//         outage_start_datetime: -1,
-//       }
-//     },
-//     {
-//       $project: {
-//         is_end_date_null: 0
-//       }
-//     }
-//   ];
-
-//   const outages = await db.collection('outages')
-//     .aggregate(pipeline)
-//     .toArray();
-
-//   const screenshotsDir = '/app/screenshots/'
-//   const screenshotFiles = fs.readdirSync(screenshotsDir);
-//   // logMsg("screenshot files: ", screenshotFiles);
-
-// // Add screenshot filenames to each outage object
-//   for (const outage of outages) {
-//     // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
-//     const outageStart = outage.outage_start_datetime;
-//     const outageEnd = outage.outage_end_datetime ? outage.outage_end_datetime : new Date().getTime();
-//     // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
-//     const outageScreenshots = screenshotFiles.filter(file => {
-//       const timestamp = parseInt(path.basename(file, '.png'));
-//       return timestamp >= outageStart && timestamp <= outageEnd;
-//     });
-//     // logMsg("outageScreenshots: ", outageScreenshots);
-//     outage.screenshots = outageScreenshots;
-//   }
-
-//   // logMsg("Outages: ", outages);
-//   return outages;
-// }
-
 async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null) {
   logMsg("Getting outages");
   await connectDb('getOutages (generateOutageChart.js)');
@@ -352,64 +283,11 @@ async function updateOutages(userWorkerData) {
               },
             }
           );
-          // setTimeout(() => {
-          //   saveChartToFile(ongoingOutage._id);
-          // }, 10 * 60 * 1000); //Save the chart 10 minutes after the outage ends
         }
       }
     }
   }
 }
-
-
-// async function updateOutages(userWorkerData) {
-//   await connectDb('updateOutages');
-//   const db = getDb();
-
-//   for (const user of userWorkerData) {
-//     if(!user.workers) continue;
-//     for (const worker of user.workers) {
-//       const worker_name = worker.hash_rate_info.name;
-//       const currentStatus = await getStatus(worker.hash_rate_info.hash_rate);
-//       const currentTime = Date.now();
-
-//       if (currentStatus === "down") {        
-//         const existingOutage = await db.collection('outages').findOne({
-//         worker_name: worker_name,
-//         outage_end_datetime: null,
-//       });
-
-//       if (!existingOutage) {
-//         const newOutage = {
-//           worker_name: worker_name,
-//           outage_start_datetime: currentTime,
-//           outage_end_datetime: null,
-//           outage_length: null,
-//         };
-//         await db.collection('outages').insertOne(newOutage);
-//       }
-//     } else {
-//       const ongoingOutage = await db.collection('outages').findOne({
-//         worker_name: worker_name,
-//         outage_end_datetime: null,
-//       });
-
-//       if (ongoingOutage) {
-//         const outageLength = currentTime - ongoingOutage.outage_start_datetime;
-//         await db.collection('outages').updateOne(
-//           { _id: ongoingOutage._id },
-//           {
-//             $set: {
-//               outage_end_datetime: currentTime,
-//               outage_length: outageLength,
-//             },
-//           }
-//         );
-//       }
-//     }
-//   }
-// }
-// }
 
 async function saveWorkerData(workerData) {
   await connectDb('saveWorkerData');
