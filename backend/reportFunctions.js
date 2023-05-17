@@ -48,8 +48,9 @@ const aggregateDataByWorker = (data) => {
 const placeholderImagePath = path.join(__dirname, 'placeholder.png');
 
 const fetchChart = async (outage) => {
-    logMsg(`fetchChart called for outage ${JSON.stringify(outage)}`, 6);
-    const chartFilePath = `${process.env.CHARTS_DIR}/${outage._id}.png`;
+    logMsg(`fetchChart called for outage ${outage._id}`, 6);
+    logMsg(`Outage Details: ${JSON.stringify(outage)}`, 8);
+    const chartFilePath = `${process.env.CHARTS_PATH}/${outage._id}.png`;
 
     if (fs.existsSync(chartFilePath)) {
         logMsg(`Chart file exists, reading chart for outage ${outage._id}`, 6);
