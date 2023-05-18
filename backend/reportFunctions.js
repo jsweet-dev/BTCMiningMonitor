@@ -5,7 +5,7 @@ const path = require('path');
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
-const { saveChartToFile } = require('./generateOutageChart');
+const { fetchChart } = require('./generateOutageChart');
 
 const formatDateTime = (date, dateOnly = true) => {
     logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`, 7);
@@ -40,37 +40,6 @@ const aggregateDataByWorker = (data) => {
     }, {});
     logMsg(`Aggregated data ${aggregatedData}`, 8);
     return Object.values(aggregatedData).map((worker) => { return { ...worker, total_downtime: worker.total_downtime.toFixed(2) } });
-};
-
-const placeholderImagePath = path.join(__dirname, 'placeholder.png');
-
-const fetchChart = async (outage) => {
-    logMsg(`fetchChart called for outage ${outage._id}`, 6);
-    logMsg(`Outage Details: ${JSON.stringify(outage)}`, 8);
-    const chartFilePath = `${process.env.CHARTS_PATH}/${outage._id}.png`;
-
-    if (fs.existsSync(chartFilePath)) {
-        logMsg(`Chart file exists, reading chart for outage ${outage._id}`, 6);
-        // Chart file exists, read and convert to base64-encoded string
-        const chartData = fs.readFileSync(chartFilePath, 'base64');
-        return `data:image/png;base64,${chartData}`;
-    } else {
-        try {
-            logMsg(`Chart file does not exist, fetching chart for outage ${outage._id}`, 6);
-            const chartPath = await saveChartToFile(outage);
-            if (chartPath.path) {
-                logMsg(`Chart created at ${chartPath.path}`, 6);
-                // Got a chart or placeholder
-                const chartData = fs.readFileSync(chartPath.path, 'base64');
-                return `data:image/png;base64,${chartData}`;
-            } else {
-                //empty 5x5 png to prevent error from pdfMake
-                return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAADElEQVQImWNgoBMAAABpAAFEI8ARAAAAAElFTkSuQmCC`;
-            }
-        } catch (error) {
-            logMsg(error.message, 1);
-        }
-    }
 };
 
 const getTableData = (data) => {
