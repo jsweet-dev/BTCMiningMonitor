@@ -1,4 +1,5 @@
 const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
+const { logMsg } = require('./logFunctions');
 const fs = require('fs');
 const path = require('path');
 
