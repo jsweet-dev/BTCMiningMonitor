@@ -1,8 +1,7 @@
-const { log } = require('console');
 const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
 const fs = require('fs');
 const path = require('path');
-const debugLevel = 6;
+const debugLevel = 7;
 
 const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
   if (msgLevel <= logLevel){
@@ -118,7 +117,7 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
 
 async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null) {
   logMsg("Getting outages", 6);
-  await connectDb('getOutages (generateOutageChart.js)');
+  await connectDb('getOutages');
   const db = getDb();
   logMsg("Connected to DB for outages", 6);
   const query = {};
@@ -194,9 +193,9 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
   }
 
   logMsg(`Outages: ${JSON.stringify(outages)}`, 8);
-  if (outages.length > 1) {
-    return outages;
-  } else {
+  if (id === null) {
+    return outages; // all non ID searches return an array of outages
+  } else { // if searching using id, return the first outage object (this is used by saveChartToFile)
     return outages[0];
   }
 }
