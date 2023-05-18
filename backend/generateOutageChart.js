@@ -3,7 +3,9 @@ const echarts = require('echarts');
 const fs = require('fs');
 const { getMinerStatistics, getOutages, logMsg } = require('./dbFunctions');
 const sharp = require('sharp');
+const path = require('path');
 
+const getChartFilePath = (outageId) => `${process.env.CHARTS_PATH}/${outageId}.png`;
 
 const getOption = (worker, outage = {}) => {
     let outageStartDate = null;
@@ -103,11 +105,11 @@ const getOption = (worker, outage = {}) => {
 const getWorkerData = async function fetchWorkers(outageInfo) {
     logMsg("Fetching worker data", 6);
     const startTime = outageInfo.outage_start_datetime - (1200000);
-    const endTime = (outageInfo.outage_end_datetime||(new Date()).getTime()) + (1200000);
+    const endTime = (outageInfo.outage_end_datetime || (new Date()).getTime()) + (1200000);
     const workerName = outageInfo.worker_name;
 
     const workerData = await getMinerStatistics(null, workerName, null, startTime, endTime, null);
-    logMsg(`Got worker data: ${JSON.stringify(workerData)}`, 8);
+    logMsg(`Worker data received: ${JSON.stringify(workerData)}`, 8);
     return workerData;
 };
 
@@ -121,8 +123,18 @@ async function saveChartToFile(outage = null, outageId = null) {
         logMsg(`Didn't get outage info, fetching from DB for outageId: ${outageId}`, 6);
         outage = await getOutages(null, null, outageId);
     }
-    logMsg(`Got outage info: ${JSON.stringify(outage)}`, 8);
+    logMsg(`Outage info received: ${JSON.stringify(outage)}`, 8);
+    if (chartExists(outage._id)) {
+        logMsg(`Chart already exists for outage: ${outage._id}. Returning existing chart path.`, 1);
+        return getChartFilePath(outage._id);
+    }
+
+    logMsg(`Fetching worker data for outage: ${outage._id}`);
     const workerData = await getWorkerData(outage);
+    if (!workerData || workerData.length === 0) {
+        logMsg(`No worker data found for outage: ${outage._id}. Aborting chart generation and returning placeholder.`, 1);
+        return getChartFilePath('placeholder.png');
+    }
     logMsg(`workerData: ${JSON.stringify(workerData)}`, 8)
     const chart = echarts.init(null, null, {
         renderer: 'svg',
@@ -136,14 +148,15 @@ async function saveChartToFile(outage = null, outageId = null) {
     chart.setOption(options);
 
     const svg = chart.renderToSVGString();
-    const chartPath = `${process.env.CHARTS_PATH}/${outage._id}.png`;
+    const chartPath = getChartFilePath(outage._id);
     try {
         logMsg(`Saving chart to ${chartPath}`, 6);
         await sharp(Buffer.from(svg), { density: 200 }).toFile(chartPath);
         return { path: chartPath, error: null };
     } catch (err) {
         logMsg(err, 1);
-        const placeholderPath = `${process.env.CHARTS_PATH}/placeholder.png`;
+        const placeholderPath = getChartFilePath('placeholder.png');
+
         if (!fs.existsSync(placeholderPath)) {
             try {
                 placeholderSvg = `<svg width="800" height="350" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -165,10 +178,71 @@ async function saveChartToFile(outage = null, outageId = null) {
     }
 };
 
+function chartExists(outageId) {
+    logMsg(`Running chartExists for outageId: ${outageId}`, 7);
+    const chartPath = getChartFilePath(outageId);
+    logMsg(`Chart path to check: ${chartPath}`, 7);
+    const exists = fs.existsSync(chartPath);
+    logMsg(`Chart exists: ${exists}`, 7);
+    return exists;
+}
+
+async function chartGenerationCycle() {
+    logMsg("Running chartGenerationCycle", 4);
+    const startTime = (new Date()).getTime() - (60 * 60 * 1000);
+    const endTime = (new Date()).getTime();
+    const outages = await getOutages(startTime, endTime);
+    if (!outages) {
+        return;
+    }
+
+    logMsg(`chartGenerationCycle - Outages: ${JSON.stringify(outages)}`, 8);
+    logMsg(`outages length = ${outages.length}`, 7)
+    for (let outage of outages) {
+        if (!await chartExists(outage._id)) {
+            logMsg(`Generating chart for outage: ${outage._id}`, 7);
+            await saveChartToFile(outage)
+                .then((retVal) => {
+                    console.log("retVal= ", retVal);
+                })
+        }
+    }
+}
+
+const placeholderImagePath = path.join(__dirname, 'placeholder.png');
+
+const fetchChart = async (outage) => {
+    logMsg(`fetchChart called for outage ${outage._id}`, 6);
+    logMsg(`Outage Details: ${JSON.stringify(outage)}`, 8);
+    const chartFilePath = getChartFilePath(outage._id);
+
+    if (chartExists(outage._id)) {
+        logMsg(`Chart file exists, reading chart for outage ${outage._id} from filesystem`, 6);
+        const chartData = fs.readFileSync(chartFilePath, 'base64');
+        return `data:image/png;base64,${chartData}`;
+    } else {
+        try {
+            logMsg(`Chart file does not exist. Starting chart creation for outage ${outage._id}`, 6);
+            const chartPath = await saveChartToFile(outage);
+            if (chartPath.path) {
+                logMsg(`Chart created at ${chartPath.path}`, 6);
+                // Got a chart or placeholder
+                const chartData = fs.readFileSync(chartPath.path, 'base64');
+                return `data:image/png;base64,${chartData}`;
+            } else {
+                //empty 5x5 png to prevent error from pdfMake
+                return `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAADElEQVQImWNgoBMAAABpAAFEI8ARAAAAAElFTkSuQmCC`;
+            }
+        } catch (error) {
+            logMsg(`Could not fetch, create or substitute chart with placeholder. Error: ${error.message}`, 1);
+        }
+    }
+};
+
 let count = 0;
 // This only needs to be used once to generate charts for past outages, 
 // new outage charts will be scheduled to generate using saveChartToFile by the polling.js script
-async function generateCharts() {
+async function generateAllCharts() {
     const outages = await getOutages();
     logMsg(`outages length = ${outages.length}`, 7)
     logMsg(`outage 1 = ${outages[0]}`, 8);
@@ -185,5 +259,8 @@ async function generateCharts() {
 
 module.exports = {
     saveChartToFile,
-    generateCharts
+    generateAllCharts,
+    chartGenerationCycle,
+    chartExists,
+    fetchChart
 } 
