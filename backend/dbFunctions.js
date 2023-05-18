@@ -2,7 +2,7 @@ const { log } = require('console');
 const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
 const fs = require('fs');
 const path = require('path');
-const debugLevel = 7;
+const debugLevel = 6;
 
 const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
   if (msgLevel <= logLevel){
