@@ -13,6 +13,7 @@ RUN apt-get update \
     && groupadd -r pptruser && useradd -rm -g pptruser -G audio,video pptruser
 
 RUN mkdir -p /app/screenshots && chown pptruser:pptruser /app/screenshots
+RUN mkdir -p /app/charts && chown pptruser:pptruser /app/charts
 
 USER pptruser
 

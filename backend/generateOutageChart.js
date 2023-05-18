@@ -136,14 +136,14 @@ async function saveChartToFile(outage = null, outageId = null) {
     chart.setOption(options);
 
     const svg = chart.renderToSVGString();
-    const chartPath = `${process.env.CHARTS_DIR}/${outage._id}.png`;
+    const chartPath = `${process.env.CHARTS_PATH}/${outage._id}.png`;
     try {
         logMsg(`Saving chart to ${chartPath}`, 6);
         await sharp(Buffer.from(svg), { density: 200 }).toFile(chartPath);
         return { path: chartPath, error: null };
     } catch (err) {
         logMsg(err, 1);
-        const placeholderPath = `${process.env.CHARTS_DIR}/placeholder.png`;
+        const placeholderPath = `${process.env.CHARTS_PATH}/placeholder.png`;
         if (!fs.existsSync(placeholderPath)) {
             try {
                 placeholderSvg = `<svg width="800" height="350" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
