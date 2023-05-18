@@ -2,7 +2,7 @@ require('dotenv').config();
 const axios = require('axios');
 const { checkOutagePage } = require('./outageChecker.js');
 const { getOutages, saveWorkerData, updateStatus, updateOutages, logMsg } = require('./dbFunctions.js');
-const { chartGenerationCycle } = require('./generateOutageChart.js');
+const { chartGenerationCycle } = require('./chartFunctions.js');
 
 const F2POOL_API_KEY = process.env.F2POOL_API_KEY;
 console.log('Starting polling at', new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));

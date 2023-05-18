@@ -5,7 +5,7 @@ const path = require('path');
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
-const { fetchChart } = require('./generateOutageChart');
+const { fetchChart } = require('./chartFunctions');
 
 const formatDateTime = (date, dateOnly = true) => {
     logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`, 7);
