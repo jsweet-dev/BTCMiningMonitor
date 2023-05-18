@@ -1,14 +1,11 @@
 const echarts = require('echarts');
-const { getMinerStatistics, logMsg } = require('./dbFunctions');
-const { JSDOM } = require('jsdom');
-const { createCanvas } = require('canvas');
+const { logMsg } = require('./dbFunctions');
 const fs = require('fs');
 const path = require('path');
 const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 const { saveChartToFile } = require('./generateOutageChart');
-const { log } = require('console');
 
 const formatDateTime = (date, dateOnly = true) => {
     logMsg(`formatDateTime received date: ${date} and dateOnly: ${dateOnly}`, 7);
