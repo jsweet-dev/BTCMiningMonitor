@@ -1,5 +1,6 @@
 const { generateDetailedPDF, generatePDF } = require('./reportFunctions');
-const { getOutages, logMsg } = require('./dbFunctions');
+const { getOutages } = require('./dbFunctions');
+const { logMsg } = require('./logFunctions');
 
 const MAX_CHUNK_SIZE = 1024 * 1024; // 1 MB
 

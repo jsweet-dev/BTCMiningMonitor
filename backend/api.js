@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getMinerStatistics, getOutages, logMsg } = require('./dbFunctions');
+const { getMinerStatistics, getOutages } = require('./dbFunctions');
+const { logMsg } = require('./logFunctions');
 const { v4: uuidv4 } = require('uuid');
 const { fork } = require('child_process');
 const reportWorkerPath = require.resolve('./reportWorker.js');

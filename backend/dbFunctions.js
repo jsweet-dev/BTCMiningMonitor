@@ -1,13 +1,6 @@
 const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
 const fs = require('fs');
 const path = require('path');
-const debugLevel = 7;
-
-const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
-  if (msgLevel <= logLevel){
-    console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
-  }
-}
 
 async function saveMinerStatus(minerStatus) {
   await connectDb('saveMinerStatus');

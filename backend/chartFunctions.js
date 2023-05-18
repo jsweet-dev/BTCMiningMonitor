@@ -1,7 +1,8 @@
 require('dotenv').config()
 const echarts = require('echarts');
 const fs = require('fs');
-const { getMinerStatistics, getOutages, logMsg } = require('./dbFunctions');
+const { getMinerStatistics, getOutages } = require('./dbFunctions');
+const { logMsg } = require('./logFunctions');
 const sharp = require('sharp');
 const path = require('path');
 

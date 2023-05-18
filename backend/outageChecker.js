@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
-const { logMsg } = require('./dbFunctions');
+const { logMsg } = require('./logFunctions');
 
 const chromiumArgs = [
   '--no-sandbox',
