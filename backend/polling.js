@@ -1,13 +1,17 @@
 require('dotenv').config();
 const axios = require('axios');
-const { checkOutagePage } = require('./StatusScraper/outageChecker.js');
-const { saveWorkerData, updateStatus, updateOutages } = require('./dbFunctions.js');
+const { checkOutagePage } = require('./outageChecker.js');
+const { logMsg } = require('./logFunctions');
+const { getOutages, saveWorkerData, updateStatus, updateOutages } = require('./dbFunctions.js');
+const { chartGenerationCycle } = require('./chartFunctions.js');
 
 const F2POOL_API_KEY = process.env.F2POOL_API_KEY;
 console.log('Starting polling at', new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
 async function fetchData() {
+  logMsg('Starting fetchData', 4);
   try {
     // Fetch mining user list
+    logMsg('Fetching mining user list from api...', 6);
     const userListResponse = await axios.post(
       'https://api.f2pool.com/v2/mining_user/list',
       {},
@@ -19,11 +23,13 @@ async function fetchData() {
       }
     );
 
-    // console.log(userListResponse.data);
+    logMsg(`Response received for mining users api call: ${Boolean(userListResponse.data)}`, 6);
+    logMsg(`Response received: ${userListResponse.data}`, 8);
 
     const miningUserList = userListResponse.data.mining_user_list;
 
     // Fetch worker list for each mining user
+    logMsg('Fetching worker list for each mining user...', 6);
     const userWorkerData = await Promise.all(
       miningUserList.map(async (user) => {
         const workerListResponse = await axios.post(
@@ -45,26 +51,29 @@ async function fetchData() {
       })
     );
 
-    // console.log("userWorkerData", userWorkerData);
-    // console.log('Saving worker data...');
+    logMsg(`Response received for all workers: ${Boolean(userWorkerData)}`, 6);
+
+    logMsg('Saving worker data...', 6);
     await saveWorkerData(userWorkerData);
-    // console.log('Saving status data...');
+    logMsg('Saving status data...', 6);
     await updateStatus(userWorkerData);
-    // console.log('Saving outages data...');
+    logMsg('Saving outages data...', 6);
     await updateOutages(userWorkerData);
-    console.log('Complete. Waiting 60 seconds...');
-    console.log("");
+    logMsg('Fetch data and save complete. Waiting 60 seconds...', 4);
 
   } catch (error) {
-    console.error('Error fetching data:', error);
+    logMsg(`Error fetching data: ${error.message}`, 1);
   }
 }
 
-console.log('Checking for outages...');
+logMsg('Setting up polling intervals...', 1);
 checkOutagePage();
 setInterval(checkOutagePage, 5 * 60 * 1000);
 
 fetchData();
 setInterval(fetchData, 60 * 1000); // Poll every minute
 
-console.log('Finished loading polling.js');
+chartGenerationCycle();
+setInterval(chartGenerationCycle, 20 * 60 * 1000); // run cycle every 20 minutes
+
+logMsg('Finished loading polling.js', 1);

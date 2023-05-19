@@ -1,10 +1,7 @@
-const { connectDb, getDb, Worker, Outage, MinerStatus } = require('./db');
+const { connectDb, getDb, Worker, Outage, MinerStatus, ObjectId } = require('./db');
+const { logMsg } = require('./logFunctions');
 const fs = require('fs');
 const path = require('path');
-
-const logMsg = (msg) => {
-  console.log(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }) + " " + msg);
-}
 
 async function saveMinerStatus(minerStatus) {
   await connectDb('saveMinerStatus');
@@ -12,13 +9,14 @@ async function saveMinerStatus(minerStatus) {
   await db.collection('minerStatus').insertOne(minerStatus);
 }
 
-async function getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName) {
+async function getMinerStatistics(host = null, workerName = null, status = null, startTime = null, endTime = null, miningUserName = null) {
+  logMsg(`getMinerStatistics(${host}, ${workerName}, ${status}, ${startTime}, ${endTime}, ${miningUserName})`, 7);
   await connectDb('getMinerStatistics');
   const db = getDb();
   const matchStage = {
     $match: {},
   };
-  
+
   if (workerName) {
     matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
   }
@@ -36,9 +34,10 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
   const start = startTime ? parseInt(startTime) : currentTime - 24 * 60 * 60 * 1000;
   // Use endTime if provided, otherwise default to the current time
   const end = endTime ? parseInt(endTime) : currentTime;
-  
+
   matchStage.$match.timestamp = { $gte: start, $lte: end };
-  
+
+  logMsg(`matchStage: ${JSON.stringify(matchStage)}`, 7);
   const pipeline = [
     {
       $lookup: {
@@ -105,31 +104,44 @@ async function getMinerStatistics(host, workerName, status, startTime, endTime, 
       },
     },
   ];
-
+  logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 7);
   const statistics = await db.collection('workers').aggregate(pipeline).toArray();
   return statistics;
 }
 
-async function getOutages(startTime, endTime) {
-  //logMsg("Getting outages");
+async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null, chart_exists = null) {
+  logMsg("Getting outages for query", 6);
   await connectDb('getOutages');
   const db = getDb();
-  //logMsg("Connected to DB for outages");
-  const query = { };
-  if(startTime) {
+  logMsg("Connected to DB for outage query", 6);
+  const query = {};
+  if (startTime !== null) {
     query.outage_start_datetime = { $gte: startTime };
   }
-  if(endTime) {
+  if (endTime !== null) {
     query.$or = [
       {
-        outage_end_datetime: { $lte: endTime}
-      }, 
+        outage_end_datetime: { $lte: endTime }
+      },
       {
         outage_end_datetime: null
       }
     ];
   }
-  // logMsg("Query: ", JSON.stringify(query));
+  if (id !== null) {
+    query._id = { $eq: new ObjectId(id) }
+  }
+  if (workerName !== null) {
+    matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
+  }
+  if (miningUserName !== null) {
+    matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
+  } 
+  if (chart_exists !== null) {
+    query.chart_exists = { $eq: chart_exists };
+  }
+
+  logMsg(`Query: ${JSON.stringify(query)}`, 7);
 
   const pipeline = [
     {
@@ -153,33 +165,43 @@ async function getOutages(startTime, endTime) {
     }
   ];
 
+  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`, 7);
+
   const outages = await db.collection('outages')
     .aggregate(pipeline)
     .toArray();
 
   const screenshotsDir = '/app/screenshots/'
   const screenshotFiles = fs.readdirSync(screenshotsDir);
-  // logMsg("screenshot files: ", screenshotFiles);
+  // logMsg("screenshot files: ", screenshotFiles, 7);
 
-// Add screenshot filenames to each outage object
+  // Add screenshot filenames to each outage object
   for (const outage of outages) {
-    // logMsg("processing screenshots for outage: ", outage.outage_start_datetime);
+    // logMsg("processing screenshots for outage: ", outage.outage_start_datetime, 7);
     const outageStart = outage.outage_start_datetime;
     const outageEnd = outage.outage_end_datetime ? outage.outage_end_datetime : new Date().getTime();
-    // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`);
+    // logMsg(`outageStart: ${outageStart}, outageEnd: ${outageEnd}`, 7);
     const outageScreenshots = screenshotFiles.filter(file => {
       const timestamp = parseInt(path.basename(file, '.png'));
       return timestamp >= outageStart && timestamp <= outageEnd;
     });
-    // logMsg("outageScreenshots: ", outageScreenshots);
+    // logMsg("outageScreenshots: ", outageScreenshots, 7);
     outage.screenshots = outageScreenshots;
   }
 
-  // logMsg("Outages: ", outages);
-  return outages;
+  logMsg(`Outages: ${JSON.stringify(outages)}`, 8);
+  if (id === null) {
+    return outages; // all non ID searches return an array of outages
+  } else { // if searching using id, return the first outage object (this is used by saveChartToFile)
+    return outages[0];
+  }
 }
 
+
 async function getStatus(statusValue) {
+  if (!typeof statusValue === 'number') {
+    throw new Error(`getStatus: statusValue must be a number. Got ${typeof statusValue}`);
+  }
   if (statusValue === 0) {
     return "down";
   } else if (statusValue >= 1 && statusValue <= 50) {
@@ -194,7 +216,7 @@ async function updateStatus(userWorkerData) {
   const db = getDb();
 
   for (const user of userWorkerData) {
-    if(!user.workers) continue;
+    if (!user.workers) continue;
     for (const worker of user.workers) {
       const workerStatus = {
         worker_name: worker.hash_rate_info.name,
@@ -211,9 +233,9 @@ async function updateStatus(userWorkerData) {
 
 function getMiningUserName(worker_name) {
   if (/^\d/.test(worker_name)) {
-    return process.env.MINING_USER_NAME_1; 
+    return process.env.MINING_USER_NAME_1;
   } else {
-    return process.env.MINING_USER_NAME_2; 
+    return process.env.MINING_USER_NAME_2;
   }
 }
 
@@ -240,6 +262,7 @@ async function updateOutages(userWorkerData) {
             outage_end_datetime: null,
             outage_length: null,
             mining_user_name: getMiningUserName(worker_name), //If you don't have more than one mining user, you can statically assign the string, rather than calling the function
+            chart_exists: false,
           });
           await newOutage.save();
         }
@@ -249,7 +272,7 @@ async function updateOutages(userWorkerData) {
           outage_end_datetime: null,
         });
 
-        if (ongoingOutage) {
+        if (ongoingOutage) { //If there is an ongoing outage, update the end time and outage length because the worker is back online
           const outageLength = currentTime - ongoingOutage.outage_start_datetime;
           await Outage.updateOne(
             { _id: ongoingOutage._id },
@@ -266,96 +289,59 @@ async function updateOutages(userWorkerData) {
   }
 }
 
+async function updateOneOutage(outageId, updateObj) {
+  await connectDb('updateOneOutage');
+  const db = getDb();
 
-// async function updateOutages(userWorkerData) {
-//   await connectDb('updateOutages');
-//   const db = getDb();
-
-//   for (const user of userWorkerData) {
-//     if(!user.workers) continue;
-//     for (const worker of user.workers) {
-//       const worker_name = worker.hash_rate_info.name;
-//       const currentStatus = await getStatus(worker.hash_rate_info.hash_rate);
-//       const currentTime = Date.now();
-
-//       if (currentStatus === "down") {        
-//         const existingOutage = await db.collection('outages').findOne({
-//         worker_name: worker_name,
-//         outage_end_datetime: null,
-//       });
-
-//       if (!existingOutage) {
-//         const newOutage = {
-//           worker_name: worker_name,
-//           outage_start_datetime: currentTime,
-//           outage_end_datetime: null,
-//           outage_length: null,
-//         };
-//         await db.collection('outages').insertOne(newOutage);
-//       }
-//     } else {
-//       const ongoingOutage = await db.collection('outages').findOne({
-//         worker_name: worker_name,
-//         outage_end_datetime: null,
-//       });
-
-//       if (ongoingOutage) {
-//         const outageLength = currentTime - ongoingOutage.outage_start_datetime;
-//         await db.collection('outages').updateOne(
-//           { _id: ongoingOutage._id },
-//           {
-//             $set: {
-//               outage_end_datetime: currentTime,
-//               outage_length: outageLength,
-//             },
-//           }
-//         );
-//       }
-//     }
-//   }
-// }
-// }
+  logMsg(`Updating outage ${outageId} with ${JSON.stringify(updateObj)}`, 7);
+  
+  await Outage.updateOne(
+    { _id: outageId },
+    { $set: updateObj }
+  );
+}
 
 async function saveWorkerData(workerData) {
   await connectDb('saveWorkerData');
 
-  // logMsg('Saving worker data:', workerData);
-    const promises = workerData.map(async (user) => {
-      const { workers, ...userData } = user;
-      if(!workers) return;
-      return Promise.all(
-          workers.map((worker) => {
-            return (
-                new Worker(
-                  // { worker_name: worker.hash_rate_info.name },
-                  {
-                    mining_user_name: userData.mining_user_name,
-                    worker_name: worker.hash_rate_info.name,
-                    last_share_at: worker.last_share_at,
-                    status: worker.status, //0 === Online, 1 === Offline, 2 === Expired
-                    host: worker.host,
-                    hash_rate: worker.hash_rate_info.hash_rate,
-                    timestamp: Date.now(),
-                  }
-                ).save()
-            );
-          }
-        )
-      );
-    });
-    
-    const event = new Date(Date.now());
-    await Promise.all(promises)
-    .then(logMsg("Saving worker data"))
-    .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`));
+  logMsg('Saving worker data:', workerData, 6);
+  const promises = workerData.map(async (user) => {
+    const { workers, ...userData } = user;
+    if (!workers) return;
+    return Promise.all(
+      workers.map((worker) => {
+        return (
+          new Worker(
+            // { worker_name: worker.hash_rate_info.name },
+            {
+              mining_user_name: userData.mining_user_name,
+              worker_name: worker.hash_rate_info.name,
+              last_share_at: worker.last_share_at,
+              status: worker.status, //0 === Online, 1 === Offline, 2 === Expired
+              host: worker.host,
+              hash_rate: worker.hash_rate_info.hash_rate,
+              timestamp: Date.now(),
+            }
+          ).save()
+        );
+      }
+      )
+    );
+  });
+
+  const event = new Date(Date.now());
+  await Promise.all(promises)
+    .then(logMsg("Saving worker data", 6))
+    .catch((err) => logMsg(`Encountered an error saving worker data: ${err}`, 1));
 }
 
-module.exports = { 
-  saveMinerStatus, 
-  getMinerStatistics, 
-  saveWorkerData, 
-  updateStatus, 
-  updateOutages, 
+module.exports = {
+  saveMinerStatus,
+  getMinerStatistics,
+  saveWorkerData,
+  updateStatus,
+  updateOutages,
+  updateOneOutage,
   getOutages,
-  logMsg 
+  logMsg
 };

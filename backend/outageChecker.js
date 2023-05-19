@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const { logMsg } = require('./logFunctions');
 
 const chromiumArgs = [
   '--no-sandbox',
@@ -31,7 +32,7 @@ const chromiumArgs = [
 ]
 
 async function checkOutagePage() {
-  console.log('Checking outage page...');
+  logMsg('Checking outage page...', 1);
   const browser = await puppeteer.launch({
     headless: true,
     args: chromiumArgs,
@@ -40,12 +41,12 @@ async function checkOutagePage() {
     try {
       const page = await browser.newPage();
       await page.goto('https://status.compassmining.io/');
-      console.log('Page loaded.');
+      logMsg('Page loaded.');
       const incidents = await page.$$eval(
         'body > div.layout-content.status.status-index.starter > div.container > div.unresolved-incidents > div.unresolved-incident',
         (elements) => elements.map((element) => element.outerHTML)
       );
-      console.log('Incidents found:', incidents.length);
+      logMsg(`Incidents found: ${incidents.length}`, 7);
     
       if (!fs.existsSync(process.env.SCREENSHOT_PATH)) {
           fs.mkdirSync(process.env.SCREENSHOT_PATH);
@@ -78,7 +79,7 @@ async function checkOutagePage() {
       const imagePath = `${process.env.SCREENSHOT_PATH}/${timestamp}.png`;
       await page.screenshot({ path: imagePath, clip: boundingBox });
       
-      console.log('Screenshot saved:', imagePath);
+      logMsg(`Screenshot saved to: ${imagePath}`, 7);
       await page.close();
     } catch (error) {
       if(!!page) await page.close();
@@ -87,7 +88,7 @@ async function checkOutagePage() {
   } finally {
     await browser.close();
     browser.disconnect();
-    console.log('Browser closed.')
+    logMsg('Browser/Outage page closed.', 1)
   }
 }
 

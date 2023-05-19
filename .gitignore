@@ -26,3 +26,5 @@ yarn-error.log*
 /dbFiles
 
 backend/utils/addMiningUserNameToOutages.js
+backend/outage_charts/*
+backend/utils/addChartExistsFlagToOutages.js
