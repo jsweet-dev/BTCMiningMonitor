@@ -37,7 +37,7 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
 
   matchStage.$match.timestamp = { $gte: start, $lte: end };
 
-  logMsg(`matchStage: ${JSON.stringify(matchStage)}`, 8);
+  logMsg(`matchStage: ${JSON.stringify(matchStage)}`, 7);
   const pipeline = [
     {
       $lookup: {
@@ -104,30 +104,21 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
       },
     },
   ];
-  logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 8);
+  logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 7);
   const statistics = await db.collection('workers').aggregate(pipeline).toArray();
   return statistics;
 }
 
-async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null) {
-  logMsg("Getting outages", 6);
+async function getOutages(startTime = null, endTime = null, id = null, workerName = null, miningUserName = null, chart_exists = null) {
+  logMsg("Getting outages for query", 6);
   await connectDb('getOutages');
   const db = getDb();
-  logMsg("Connected to DB for outages", 6);
+  logMsg("Connected to DB for outage query", 6);
   const query = {};
-  if (id) {
-    console.log("id: ", id);
-    query._id = { $eq: new ObjectId(id) }
-  }
-  if (workerName) {
-    matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
-  }
-  if (miningUserName) {
-    matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
-  } if (startTime) {
+  if (startTime !== null) {
     query.outage_start_datetime = { $gte: startTime };
   }
-  if (endTime) {
+  if (endTime !== null) {
     query.$or = [
       {
         outage_end_datetime: { $lte: endTime }
@@ -137,8 +128,20 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
       }
     ];
   }
+  if (id !== null) {
+    query._id = { $eq: new ObjectId(id) }
+  }
+  if (workerName !== null) {
+    matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
+  }
+  if (miningUserName !== null) {
+    matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
+  } 
+  if (chart_exists !== null) {
+    query.chart_exists = { $eq: chart_exists };
+  }
 
-  logMsg(`Query: ${JSON.stringify(query)}`, 8);
+  logMsg(`Query: ${JSON.stringify(query)}`, 7);
 
   const pipeline = [
     {
@@ -162,7 +165,7 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
     }
   ];
 
-  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`, 8);
+  logMsg(`Outage pipeline: ${JSON.stringify(pipeline)}`, 7);
 
   const outages = await db.collection('outages')
     .aggregate(pipeline)
@@ -259,6 +262,7 @@ async function updateOutages(userWorkerData) {
             outage_end_datetime: null,
             outage_length: null,
             mining_user_name: getMiningUserName(worker_name), //If you don't have more than one mining user, you can statically assign the string, rather than calling the function
+            chart_exists: false,
           });
           await newOutage.save();
         }
@@ -283,6 +287,18 @@ async function updateOutages(userWorkerData) {
       }
     }
   }
+}
+
+async function updateOneOutage(outageId, updateObj) {
+  await connectDb('updateOneOutage');
+  const db = getDb();
+
+  logMsg(`Updating outage ${outageId} with ${JSON.stringify(updateObj)}`, 7);
+  
+  await Outage.updateOne(
+    { _id: outageId },
+    { $set: updateObj }
+  );
 }
 
 async function saveWorkerData(workerData) {
@@ -325,6 +341,7 @@ module.exports = {
   saveWorkerData,
   updateStatus,
   updateOutages,
+  updateOneOutage,
   getOutages,
   logMsg
 };
