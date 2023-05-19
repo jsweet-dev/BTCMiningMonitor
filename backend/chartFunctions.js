@@ -114,6 +114,15 @@ const getWorkerData = async function fetchWorkers(outageInfo) {
     return workerData;
 };
 
+async function chartExists(outageId) {
+    logMsg(`Running chartExists for outageId: ${outageId}`, 7);
+    const outage = await getOutages(null, null, outageId);
+    logMsg(`Outage info received: ${JSON.stringify(outage)}`, 7);
+    const exists = outage.chart_exists;
+    logMsg(`Chart exists: ${exists}`, 7);
+    return exists;
+}
+
 async function saveChartToFile(outage = null, outageId = null) {
     logMsg(`Running saveChartToFile`, 4);
     if (!outageId && !outage) {
@@ -125,7 +134,7 @@ async function saveChartToFile(outage = null, outageId = null) {
         outage = await getOutages(null, null, outageId);
     }
     logMsg(`Outage info received: ${JSON.stringify(outage)}`, 8);
-    if (chartExists(outage._id)) {
+    if (await chartExists(outage._id)) {
         logMsg(`Chart already exists for outage: ${outage._id}. Returning existing chart path.`, 1);
         return getChartFilePath(outage._id);
     }
@@ -179,15 +188,6 @@ async function saveChartToFile(outage = null, outageId = null) {
     }
 };
 
-async function chartExists(outageId) {
-    logMsg(`Running chartExists for outageId: ${outageId}`, 7);
-    const outage = await getOutages(null, null, outageId);
-    logMsg(`Outage info received: ${JSON.stringify(outage)}`, 7);
-    const exists = outage.chart_exists;
-    logMsg(`Chart exists: ${exists}`, 7);
-    return exists;
-}
-
 async function chartGenerationCycle() {
     logMsg("chartGenerationCycle - Starting...", 4);
     const endTime = (new Date()).getTime() - (20 * 60 * 1000);
@@ -202,13 +202,15 @@ async function chartGenerationCycle() {
     let updateCount = 0;
     for (let outage of outages) {
         if (outage.outage_end_datetime !== null) {
-            updateCount++;
             logMsg(`chartGenerationCycle - Generating chart for outage: ${outage._id}`, 7);
             await saveChartToFile(outage)
-                .then((retVal) => {
-                    if(!retVal.error){
-                        logMsg(`chartGenerationCycle - Chart created successfully for outage: ${outage._id}, updating chart_exists in DB`, 6);
-                        updateOneOutage(outage._id, { chart_exists: true });
+            .then((retVal) => {
+                if (!retVal.error) {
+                    if (fs.existsSync(retVal.path)) { //double check that the returned path is readable before updating the DB
+                            updateCount++;
+                            logMsg(`chartGenerationCycle - Chart created successfully for outage: ${outage._id}, updating chart_exists in DB`, 6);
+                            updateOneOutage(outage._id, { chart_exists: true });
+                        }
                     }
                 });
         }
@@ -224,7 +226,7 @@ const fetchChart = async (outage) => {
     logMsg(`Outage Details: ${JSON.stringify(outage)}`, 8);
     const chartFilePath = getChartFilePath(outage._id);
 
-    if (chartExists(outage._id)) {
+    if (await chartExists(outage._id)) {
         logMsg(`Chart file exists, reading chart for outage ${outage._id} from filesystem`, 6);
         const chartData = fs.readFileSync(chartFilePath, 'base64');
         return `data:image/png;base64,${chartData}`;
