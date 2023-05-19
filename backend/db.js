@@ -29,6 +29,7 @@ const outageSchema = new mongoose.Schema({
   outage_end_datetime: Number,
   outage_length: Number,
   mining_user_name: String,
+  chart_exists: Boolean,
 });
 
 const Outage = mongoose.model('Outage', outageSchema);
