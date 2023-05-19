@@ -1,7 +1,7 @@
 require('dotenv').config()
 const echarts = require('echarts');
 const fs = require('fs');
-const { getMinerStatistics, getOutages } = require('./dbFunctions');
+const { getMinerStatistics, getOutages, updateOneOutage } = require('./dbFunctions');
 const { logMsg } = require('./logFunctions');
 const sharp = require('sharp');
 const path = require('path');
@@ -136,7 +136,7 @@ async function saveChartToFile(outage = null, outageId = null) {
         logMsg(`No worker data found for outage: ${outage._id}. Aborting chart generation and returning placeholder.`, 1);
         return getChartFilePath('placeholder.png');
     }
-    logMsg(`workerData: ${JSON.stringify(workerData)}`, 8)
+    logMsg(`Received workerData`, 7); //: ${JSON.stringify(workerData)}`, 8)
     const chart = echarts.init(null, null, {
         renderer: 'svg',
         ssr: true,
@@ -179,35 +179,40 @@ async function saveChartToFile(outage = null, outageId = null) {
     }
 };
 
-function chartExists(outageId) {
+async function chartExists(outageId) {
     logMsg(`Running chartExists for outageId: ${outageId}`, 7);
-    const chartPath = getChartFilePath(outageId);
-    logMsg(`Chart path to check: ${chartPath}`, 7);
-    const exists = fs.existsSync(chartPath);
+    const outage = await getOutages(null, null, outageId);
+    logMsg(`Outage info received: ${JSON.stringify(outage)}`, 7);
+    const exists = outage.chart_exists;
     logMsg(`Chart exists: ${exists}`, 7);
     return exists;
 }
 
 async function chartGenerationCycle() {
     logMsg("Running chartGenerationCycle", 4);
-    const startTime = (new Date()).getTime() - (60 * 60 * 1000);
-    const endTime = (new Date()).getTime();
-    const outages = await getOutages(startTime, endTime);
+    const endTime = (new Date()).getTime() - (20 * 60 * 1000);
+    const outages = await getOutages(null, endTime, null, null, null, false);
     if (!outages) {
         return;
     }
 
     logMsg(`chartGenerationCycle - Outages: ${JSON.stringify(outages)}`, 8);
-    logMsg(`outages length = ${outages.length}`, 7)
+    logMsg(`chartGenerationCycle - got ${outages.length} outages`, 7)
+    let updateCount = 0;
     for (let outage of outages) {
-        if (!await chartExists(outage._id)) {
-            logMsg(`Generating chart for outage: ${outage._id}`, 7);
+        if (outage.outage_end_datetime !== null) {
+            updateCount++;
+            logMsg(`chartGenerationCycle - Generating chart for outage: ${outage._id}`, 7);
             await saveChartToFile(outage)
                 .then((retVal) => {
-                    console.log("retVal= ", retVal);
-                })
+                    if(!retVal.error){
+                        logMsg(`chartGenerationCycle - Chart created successfully for outage: ${outage._id}, updating chart_exists in DB`, 6);
+                        updateOneOutage(outage._id, { chart_exists: true });
+                    }
+                });
         }
     }
+    logMsg(`chartGenerationCycle - ${updateCount} outages updated, ${outages.length - updateCount} did not qualify for chart generation`, 4);
 }
 
 const placeholderImagePath = path.join(__dirname, 'placeholder.png');
