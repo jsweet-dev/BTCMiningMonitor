@@ -1,4 +1,4 @@
-const debugLevel = 7;
+const debugLevel = 4;
 
 const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
   if (msgLevel <= logLevel){

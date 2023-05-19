@@ -189,10 +189,11 @@ async function chartExists(outageId) {
 }
 
 async function chartGenerationCycle() {
-    logMsg("Running chartGenerationCycle", 4);
+    logMsg("chartGenerationCycle - Starting...", 4);
     const endTime = (new Date()).getTime() - (20 * 60 * 1000);
     const outages = await getOutages(null, endTime, null, null, null, false);
     if (!outages) {
+        logMsg("No outages found", 4);
         return;
     }
 
@@ -212,7 +213,8 @@ async function chartGenerationCycle() {
                 });
         }
     }
-    logMsg(`chartGenerationCycle - ${updateCount} outages updated, ${outages.length - updateCount} did not qualify for chart generation`, 4);
+    logMsg(`chartGenerationCycle - ` + (outages.length === 0 ? "No outages need charts" : updateCount + " outages updated, " + (outages.length - updateCount) + " did not qualify for chart generation"), 6);
+    logMsg(`chartGenerationCycle - Finished`, 4);
 }
 
 const placeholderImagePath = path.join(__dirname, 'placeholder.png');
