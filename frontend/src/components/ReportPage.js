@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress, Toolbar, IconButton, Menu } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import { styled } from '@mui/system';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import './print.css'
+import './reportPage.css'
 
 
 const MemoizedSearchBar = React.memo(SearchBar);
@@ -40,7 +43,7 @@ const initialSearchTerm = {
     dateRange: {
         startDate: calculatedStartOfMonth,
         endDate: calculatedEndOfMonth
-  },
+    },
     searchSubmitted: currentTime
 }
 
@@ -123,10 +126,10 @@ const ReportPage = () => {
 
     const generatePDF = useCallback(async (type) => {
         // console.debug(`Generating ${type} PDF`)//, searchTerm)
-        type === 'summary' 
-        ? setSummaryReportStatus({ loading: true, error: false, reportUrl: '' }) 
-        : setReportStatus({ loading: true, error: false, reportUrl: '' });
-        
+        type === 'summary'
+            ? setSummaryReportStatus({ loading: true, error: false, reportUrl: '' })
+            : setReportStatus({ loading: true, error: false, reportUrl: '' });
+
         try {
             const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/${type}`, {
                 method: 'POST',
@@ -139,7 +142,7 @@ const ReportPage = () => {
             const jobId = resJson.jobId;
 
             // Check the job status until the report is ready or an error occurs
-            if(!jobId) {
+            if (!jobId) {
                 throw new Error('503');
             }
             const report = await checkJobStatus(jobId, type);
@@ -148,13 +151,13 @@ const ReportPage = () => {
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
             const reportUrl = URL.createObjectURL(blob);
             type === 'summary'
-            ? setSummaryReportStatus({ loading: false, error: false, reportUrl })
-            : setReportStatus({ loading: false, error: false, reportUrl });
+                ? setSummaryReportStatus({ loading: false, error: false, reportUrl })
+                : setReportStatus({ loading: false, error: false, reportUrl });
         } catch (error) {
             // console.debug('Error generating report:', error.message);
             type === 'summary'
-            ? setSummaryReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' })
-            : setReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' });
+                ? setSummaryReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' })
+                : setReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' });
         }
     }, [searchTerm]);
 
@@ -168,20 +171,36 @@ const ReportPage = () => {
 
     const TableHeader = ({ dateRange, selectedMiners }) => {
         const formatDate = (date) => new Date(date).toLocaleString("en-US");
-        const title = `Miner Outages for ${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`;
+        const title = `Outages during:
+         ${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`;
         const subtitle = selectedMiners.length > 0 ? `Limited to miners: ${selectedMiners.join(', ')}` : '';
 
         return (
             <div>
-                <h2>{title}</h2>
+                <h2 style={{ whiteSpace: 'pre-line', marginTop: '10px' }}>{title}</h2>
                 {subtitle && <h3>{subtitle}</h3>}
             </div>
         );
     };
 
+    const StyledTableHeaderCell = styled(TableCell)({
+        padding: '5px',
+        fontSize: '1.25rem',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    });
+
+    const StyledTableCell = styled(TableCell)({
+        padding: '5px',
+        textAlign: 'center',
+    });
+
 
     return (
         <>
+            <div className="no-print">
+                <h2>Outages Report</h2>
+            </div>
             <span className="no-print">
                 <MemoizedSearchBar
                     filterCriteria={[
@@ -193,26 +212,30 @@ const ReportPage = () => {
                 />
             </span>
             <div>
-                <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} />
-                <TableContainer component={Paper} elevation={12} sx={{ margin: '20px,20px,20px,20px', maxHeight: '60vh', width: 'calc(100% - 25px)' }} id="outagesTable">
+               {/* <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} /> */}
+               <Toolbar>
+                    <IconButton>
+                        <MenuIcon />
+                    </IconButton>
+               </Toolbar>
+                <TableContainer component={Paper} elevation={12} sx={{ margin: '20px,20px,20px,20px', maxHeight: '55vh', width: 'calc(100% - 5px)' }} id="outagesTable">
                     <Table stickyHeader aria-label="outages table">
                         <TableHead sx={{ fontSize: '1.875rem' }}>
-                            <TableRow sx={{ fontSize: '1.875rem' }}>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Worker Name</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage Start</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage End</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage Length</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}></TableCell>
+                            <TableRow>
+                                <StyledTableHeaderCell sx={{ fontSize: '1.25rem', width: '20%' }}>Worker Name</StyledTableHeaderCell>
+                                <StyledTableHeaderCell className='outageEndTimeColumn' sx={{ fontSize: '1.25rem', width: '25%' }}>Start</StyledTableHeaderCell>
+                                <StyledTableHeaderCell className='outageEndTimeColumn' sx={{ fontSize: '1.25rem', width: '25%' }}>End</StyledTableHeaderCell>
+                                <StyledTableHeaderCell colSpan={2} sx={{ fontSize: '1.25rem', width: '30%' }}>Length / Details</StyledTableHeaderCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {filteredOutages.map((outage) => (
                                 <TableRow key={outage._id}>
-                                    <TableCell >{outage.worker_name}</TableCell>
-                                    <TableCell >{new Date(outage.outage_start_datetime).toLocaleString()}</TableCell>
-                                    <TableCell >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
-                                    <TableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</TableCell>
-                                    <TableCell>
+                                    <StyledTableCell sx={{fontWeight: 'bold'}}>{outage.worker_name}</StyledTableCell>
+                                    <StyledTableCell className='outageEndTimeColumn' >{new Date(outage.outage_start_datetime).toLocaleString()}</StyledTableCell>
+                                    <StyledTableCell className='outageEndTimeColumn' >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</StyledTableCell>
+                                    <StyledTableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</StyledTableCell>
+                                    <StyledTableCell>
                                         <Link
                                             className='outage-details-link'
                                             key={outage._id}
@@ -223,32 +246,30 @@ const ReportPage = () => {
                                                 Details
                                             </Button>
                                         </Link>
-                                    </TableCell>
+                                    </StyledTableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TableContainer component={Paper} elevation={12} sx={{ maxHeight: '6vh', width: 'calc(100% - 25px)' }} id="outagesTotals">
-                    <Table>
+                <TableContainer component={Paper} elevation={12} sx={{ width: 'calc(100% - 5px)', overflow: 'hidden' }} id="outagesTotals">
+                    <Table sx={{ width: 'calc(100% - 17px)' }}>
                         <TableBody>
                             <TableRow>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}>Total Outages: {outageCount}</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}></TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }} align='right'>Total Outage Length:</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}> {formattedTotalOutageLength} hours</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}></TableCell>
+                                <StyledTableHeaderCell sx={{ fontSize: '1.25rem', width: '20%' }}>Count:&nbsp;{outageCount}</StyledTableHeaderCell>
+                                <StyledTableHeaderCell sx={{ fontSize: '1.1rem', width: '30%' }}>Total Length: {formattedTotalOutageLength}&nbsp;hrs</StyledTableHeaderCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </TableContainer>
             </div>
-            {/* <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF(filteredOutages, searchTerm)}>
-                Generate Summary PDF
-            </Button> */}
             <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
                 {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
                 {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
+            </Button>
+            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
+                {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
+                {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
             <Button
                 className="no-print"
@@ -258,10 +279,6 @@ const ReportPage = () => {
                 onClick={() => window.print()}
             >
                 Print Summary
-            </Button>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
-                {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
-                {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
             </Button>
             {summaryReportStatus.reportUrl && (
                 <div style={{ marginTop: 10 }}>
