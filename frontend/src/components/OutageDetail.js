@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ReactECharts } from './ReactECharts.tsx';
-import { TableCell, TableRow, Paper, Table, TableHead, TableBody, TableContainer, Grid, Box } from '@mui/material';
+import { TableCell, TableRow, Paper, Table, TableHead, TableBody, TableContainer, Box } from '@mui/material';
 import './outageDetail.css'
 
 const getOption = (worker, outageInfo) => {
