@@ -20,6 +20,11 @@
     margin: 5px;
 }
 
+#reportActionsContainer > div {
+    margin-bottom: 5px;
+    margin-top: 2px;
+}
+
 .page-title {
     margin: 10px auto; 
     white-space: pre-line; 

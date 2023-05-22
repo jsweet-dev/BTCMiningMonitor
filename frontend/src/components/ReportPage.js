@@ -257,14 +257,14 @@ const ReportPage = () => {
                         </Button>
                     </Tooltip>
                     {summaryReportStatus.reportUrl && (
-                        <div style={{ display: 'inline-block', marginTop: 10 }}>
+                        <div>
                             <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
                                 View/Download Summary Report
                             </a>
                         </div>
                     )}
                     {reportStatus.reportUrl && (
-                        <div style={{ display: 'inline-block', marginTop: 10 }}>
+                        <div>
                             <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
                                 View/Download Detailed Report
                             </a>
