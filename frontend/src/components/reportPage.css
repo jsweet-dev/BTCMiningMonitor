@@ -7,3 +7,11 @@
 .detailsBtn {
     width: 50%;
 }
+
+.reportActions {
+    margin-top: -30px;
+}
+
+.pageTitle {
+    margin: 10px auto; 
+}
