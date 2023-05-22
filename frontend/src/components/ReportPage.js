@@ -1,9 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress } from '@mui/material';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Button,
+    CircularProgress,
+    Tooltip,
+    IconButton,
+    Collapse,
+    FormControlLabel,
+    Switch
+} from '@mui/material';
+import { PictureAsPdf, Print } from '@mui/icons-material';
+import { styled } from '@mui/system';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
-import './print.css'
+import './reportPage.css'
 
 
 const MemoizedSearchBar = React.memo(SearchBar);
@@ -40,7 +57,7 @@ const initialSearchTerm = {
     dateRange: {
         startDate: calculatedStartOfMonth,
         endDate: calculatedEndOfMonth
-  },
+    },
     searchSubmitted: currentTime
 }
 
@@ -75,6 +92,11 @@ const ReportPage = () => {
     const [uniqueMiners, setUniqueMiners] = useState([]);
     const [reportStatus, setReportStatus] = useState({ loading: false, error: false, reportUrl: '' });
     const [summaryReportStatus, setSummaryReportStatus] = useState({ loading: false, error: false, reportUrl: '' });
+    const [showFilters, setShowFilters] = React.useState(false);
+
+    const handleShowFiltersChange = () => {
+        setShowFilters((prev) => !prev);
+    };
 
     const handleSearch = useCallback((term) => {
         const searchSubmitted = Date.now();
@@ -123,10 +145,10 @@ const ReportPage = () => {
 
     const generatePDF = useCallback(async (type) => {
         // console.debug(`Generating ${type} PDF`)//, searchTerm)
-        type === 'summary' 
-        ? setSummaryReportStatus({ loading: true, error: false, reportUrl: '' }) 
-        : setReportStatus({ loading: true, error: false, reportUrl: '' });
-        
+        type === 'summary'
+            ? setSummaryReportStatus({ loading: true, error: false, reportUrl: '' })
+            : setReportStatus({ loading: true, error: false, reportUrl: '' });
+
         try {
             const response = await fetch(`${process.env.REACT_APP_API_HOST}/api/reports/${type}`, {
                 method: 'POST',
@@ -139,7 +161,7 @@ const ReportPage = () => {
             const jobId = resJson.jobId;
 
             // Check the job status until the report is ready or an error occurs
-            if(!jobId) {
+            if (!jobId) {
                 throw new Error('503');
             }
             const report = await checkJobStatus(jobId, type);
@@ -148,13 +170,13 @@ const ReportPage = () => {
             const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
             const reportUrl = URL.createObjectURL(blob);
             type === 'summary'
-            ? setSummaryReportStatus({ loading: false, error: false, reportUrl })
-            : setReportStatus({ loading: false, error: false, reportUrl });
+                ? setSummaryReportStatus({ loading: false, error: false, reportUrl })
+                : setReportStatus({ loading: false, error: false, reportUrl });
         } catch (error) {
             // console.debug('Error generating report:', error.message);
             type === 'summary'
-            ? setSummaryReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' })
-            : setReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' });
+                ? setSummaryReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' })
+                : setReportStatus({ loading: false, error: error.message === '503' ? 503 : true, reportUrl: '' });
         }
     }, [searchTerm]);
 
@@ -166,117 +188,135 @@ const ReportPage = () => {
 
     const formattedTotalOutageLength = (totalOutageLength).toFixed(3);
 
-    const TableHeader = ({ dateRange, selectedMiners }) => {
-        const formatDate = (date) => new Date(date).toLocaleString("en-US");
-        const title = `Miner Outages for ${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`;
+    const PageHeader = ({ dateRange, selectedMiners }) => {
+        const formatDate = (date) => new Date(date).toLocaleDateString("en-US");
+        const title = `Outages during:
+         ${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`;
         const subtitle = selectedMiners.length > 0 ? `Limited to miners: ${selectedMiners.join(', ')}` : '';
 
         return (
             <div>
-                <h2>{title}</h2>
+                <h2 className='page-title'>{title}</h2>
                 {subtitle && <h3>{subtitle}</h3>}
             </div>
         );
     };
 
-
     return (
         <>
+            <div className="no-print">
+                <PageHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} />
+            </div>
             <span className="no-print">
-                <MemoizedSearchBar
-                    filterCriteria={[
-                        { workerName: ['string'] },
-                        { dateRange: ['dateRange'] },
-                        { miningUserName: ['string'] },
-                    ]}
-                    onSearch={handleSearch}
+                <FormControlLabel
+                    control={<Switch checked={showFilters} onChange={handleShowFiltersChange} />}
+                    label="Show Filters"
                 />
+                <Collapse in={showFilters}>
+                    <MemoizedSearchBar
+                        filterCriteria={[
+                            { workerName: ['string'] },
+                            { dateRange: ['dateRange'] },
+                            { miningUserName: ['string'] },
+                        ]}
+                        onSearch={handleSearch}
+                    />
+                </Collapse>
             </span>
             <div>
-                <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} />
-                <TableContainer component={Paper} elevation={12} sx={{ margin: '20px,20px,20px,20px', maxHeight: '60vh', width: 'calc(100% - 25px)' }} id="outagesTable">
-                    <Table stickyHeader aria-label="outages table">
-                        <TableHead sx={{ fontSize: '1.875rem' }}>
-                            <TableRow sx={{ fontSize: '1.875rem' }}>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Worker Name</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage Start</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage End</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}>Outage Length</TableCell>
-                                <TableCell sx={{ fontSize: '1.5rem', width: '20%' }}></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredOutages.map((outage) => (
-                                <TableRow key={outage._id}>
-                                    <TableCell >{outage.worker_name}</TableCell>
-                                    <TableCell >{new Date(outage.outage_start_datetime).toLocaleString()}</TableCell>
-                                    <TableCell >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
-                                    <TableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</TableCell>
-                                    <TableCell>
-                                        <Link
-                                            className='outage-details-link'
-                                            key={outage._id}
-                                            to={`/outageDetails/${outage._id}`}
-                                            state={{ outageInfo: outage, outageId: outage._id }}
-                                        >
-                                            <Button variant="contained" color="primary">
-                                                Details
-                                            </Button>
-                                        </Link>
-                                    </TableCell>
+                <div className="no-print" id="reportActionsContainer">
+                    <Tooltip title="Create Summary Report" placement="top-start">
+                        <Button className="no-print" variant="contained" color="primary" onClick={() => generatePDF('summary')}>
+                            {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Summary "}
+                            {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
+                            {!reportStatus.loading && !reportStatus.error &&
+                                <PictureAsPdf />
+                            }
+
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Create Detailed Report" placement="top-end">
+                        <Button className="no-print" variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
+                            {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Detailed"}
+                            {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
+                            {!reportStatus.loading && !reportStatus.error &&
+                                <PictureAsPdf />
+                            }
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Print Page" placement="top">
+                        <Button
+                            className="no-print"
+                            variant="contained"
+                            color="primary"
+                            onClick={() => window.print()}
+                            aria-label='print page'
+                        >
+                            <Print />
+                        </Button>
+                    </Tooltip>
+                    {summaryReportStatus.reportUrl && (
+                        <div>
+                            <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                                View/Download Summary Report
+                            </a>
+                        </div>
+                    )}
+                    {reportStatus.reportUrl && (
+                        <div>
+                            <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                                View/Download Detailed Report
+                            </a>
+                        </div>
+                    )}
+                </div>
+                <div className="tables-container">
+                    <TableContainer className='outages-table' component={Paper} elevation={12}>
+                        <Table stickyHeader aria-label="outages table"  id="outagesTable">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell id='workerNameHead' className="table-header-cell" sx={{ width: '20%' }}>Worker Name</TableCell>
+                                    <TableCell className='outage-start-time-column' sx={{ width: '25%' }}>Start</TableCell>
+                                    <TableCell className='outage-end-time-column' sx={{ width: '25%' }}>End</TableCell>
+                                    <TableCell colSpan={2} sx={{ width: '30%' }}>Length / Details</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <TableContainer component={Paper} elevation={12} sx={{ maxHeight: '6vh', width: 'calc(100% - 25px)' }} id="outagesTotals">
-                    <Table>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}>Total Outages: {outageCount}</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}></TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }} align='right'>Total Outage Length:</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}> {formattedTotalOutageLength} hours</TableCell>
-                                <TableCell sx={{ fontSize: '1.3rem', width: '20%' }}></TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {filteredOutages.map((outage) => (
+                                    <TableRow key={outage._id}>
+                                        <TableCell className='worker-name-column-header'>{outage.worker_name}</TableCell>
+                                        <TableCell className='outage-start-time-column' >{new Date(outage.outage_start_datetime).toLocaleString()}</TableCell>
+                                        <TableCell className='outage-end-time-column' >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
+                                        <TableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</TableCell>
+                                        <TableCell>
+                                            <Link
+                                                className='outage-details-link'
+                                                key={outage._id}
+                                                to={`/outageDetails/${outage._id}`}
+                                                state={{ outageInfo: outage, outageId: outage._id }}
+                                            >
+                                                <Button variant="contained" color="primary">
+                                                    Details
+                                                </Button>
+                                            </Link>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TableContainer className='totals-table' component={Paper} elevation={12}>
+                        <Table id="outagesTotals">
+                            <TableBody>
+                                <TableRow>
+                                    <TableCell sx={{ width: '20%' }}>Count:&nbsp;{outageCount}</TableCell>
+                                    <TableCell sx={{ width: '30%' }}>Total Length: {formattedTotalOutageLength}&nbsp;hrs</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </div>
             </div>
-            {/* <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF(filteredOutages, searchTerm)}>
-                Generate Summary PDF
-            </Button> */}
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
-                {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
-                {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
-            </Button>
-            <Button
-                className="no-print"
-                style={{ margin: "10px" }}
-                variant="contained"
-                color="primary"
-                onClick={() => window.print()}
-            >
-                Print Summary
-            </Button>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
-                {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
-                {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
-            </Button>
-            {summaryReportStatus.reportUrl && (
-                <div style={{ marginTop: 10 }}>
-                    <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
-                        View/Download Summary Report
-                    </a>
-                </div>
-            )}
-            {reportStatus.reportUrl && (
-                <div style={{ marginTop: 10 }}>
-                    <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
-                        View/Download Detailed Report
-                    </a>
-                </div>
-            )}
         </>
     );
 };

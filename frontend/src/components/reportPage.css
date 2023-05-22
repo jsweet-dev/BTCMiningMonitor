@@ -1,0 +1,116 @@
+@media only screen and (max-width: 500px) {
+    .outage-end-time-column {
+        display: none !important;
+    }
+
+    .outage-start-time-column {
+        display: none !important;
+    }
+}
+
+.details-btn {
+    width: 50%;
+}
+
+.report-actions {
+    margin-top: 0px;
+}
+
+#reportActionsContainer > button {
+    margin: 5px;
+}
+
+#reportActionsContainer > div {
+    margin-bottom: 5px;
+    margin-top: 2px;
+}
+
+.page-title {
+    margin: 10px auto; 
+    white-space: pre-line; 
+    margin-top: 10px;
+}
+
+.outages-table {
+    position: relative;
+    margin: '20px,20px,20px,20px';
+    /* max-height: '55vh'; */
+    width: 'calc(100% - 5px)';
+}
+
+.totals-table {
+    position: sticky;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.tables-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+}
+
+#outagesTable > thead > tr > th {
+    font-weight: bold;
+    padding: 5px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+#outagesTable > tbody > tr > td {
+    padding: 5px;
+    text-align: center;
+}
+
+#outagesTable > tbody > tr > .worker-name-column-header {
+    font-weight: bold;
+}
+
+#outagesTotals > tbody > tr > td {
+    font-weight: bold;
+    padding: 5px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+@media print {
+    body {
+        counter-reset: page 1;
+        margin: 30px;
+    }
+
+    #outagesTable th{
+        counter-increment: page;
+    }
+
+    #tableFooter::after {
+        content: "Page " counter(page);
+        position: fixed;
+        bottom: 1cm;
+        right: 1cm;
+        font-size: 14px;
+    }
+
+    tr {
+        page-break-inside: avoid;
+    }
+
+    tfoot {
+        display: table-row-group;
+    }
+
+    #outagesTotals {
+        position: fixed;
+    }
+
+    .no-print,
+    .no-print * {
+        display: none !important;
+    }
+
+    #outagesTable {
+        max-height: none;
+    }
+}
