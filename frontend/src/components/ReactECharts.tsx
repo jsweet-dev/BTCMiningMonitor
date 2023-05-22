@@ -40,6 +40,7 @@ export type EChartsOption = ComposeOption<
 export interface ReactEChartsProps {
   option: EChartsOption;
   style?: CSSProperties;
+  className?: string;
   settings?: SetOptionOpts;
   loading?: boolean;
   theme?: "light" | "dark";
@@ -49,6 +50,7 @@ export interface ReactEChartsProps {
 export function ReactECharts({
   option,
   style,
+  className,
   settings,
   loading,
   theme,
@@ -94,5 +96,5 @@ export function ReactECharts({
     }
   }, [loading, theme]);
 
-  return <div ref={chartRef} style={{ width: "100%", height: "100px", ...style }} />;
+  return <div ref={chartRef} style={{ ...style }} className={className}/>;
 }
