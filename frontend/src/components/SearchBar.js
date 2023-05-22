@@ -14,7 +14,7 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { DateRangePicker } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-
+import './searchBar.css'
 
 const SearchBar = ({ filterCriteria, onSearch }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -157,7 +157,7 @@ const SearchBar = ({ filterCriteria, onSearch }) => {
                     showSelectionPreview={true}
                     moveRangeOnFirstSelection={false}
                     months={2}
-                    direction="horizontal"
+                    direction="vertical"
                     ranges={[
                       {
                         startDate: searchQuery[key].startDate,
