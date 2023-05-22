@@ -1,35 +1,71 @@
 @media only screen and (max-width: 500px) {
-    .outageEndTimeColumn {
+    .outage-end-time-column {
         display: none !important;
-    }  
+    }
+
+    .outage-start-time-column {
+        display: none !important;
+    }
 }
 
-.detailsBtn {
+.details-btn {
     width: 50%;
 }
 
-.reportActions {
+.report-actions {
     margin-top: 0px;
 }
 
-.pageTitle {
-    margin: 10px auto; 
+#reportActionsContainer > button {
+    margin: 5px;
 }
 
-.outagesTable {
+.page-title {
+    margin: 10px auto; 
+    white-space: pre-line; 
+    margin-top: 10px;
+}
+
+.outages-table {
     position: relative;
     margin: '20px,20px,20px,20px';
     /* max-height: '55vh'; */
     width: 'calc(100% - 5px)';
 }
 
-.totalsTable {
+.totals-table {
     position: sticky;
     bottom: 0;
+    overflow: hidden;
 }
 
-.dataTables_wrapper {
+.tables-container {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
+}
+
+#outagesTable > thead > tr > th {
+    font-weight: bold;
+    padding: 5px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+#outagesTable > tbody > tr > td {
+    padding: 5px;
+    text-align: center;
+}
+
+#outagesTable > tbody > tr > .worker-name-column-header {
+    font-weight: bold;
+}
+
+#outagesTotals > tbody > tr > td {
+    font-weight: bold;
+    padding: 5px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
 }

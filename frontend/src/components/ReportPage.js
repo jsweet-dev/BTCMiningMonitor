@@ -197,24 +197,11 @@ const ReportPage = () => {
 
         return (
             <div>
-                <h2 style={{ whiteSpace: 'pre-line', marginTop: '10px' }}>{title}</h2>
+                <h2 className='page-title'>{title}</h2>
                 {subtitle && <h3>{subtitle}</h3>}
             </div>
         );
     };
-
-    const StyledTableHeaderCell = styled(TableCell)({
-        padding: '5px',
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    });
-
-    const StyledTableCell = styled(TableCell)({
-        padding: '5px',
-        textAlign: 'center',
-    });
-
 
     return (
         <>
@@ -238,15 +225,9 @@ const ReportPage = () => {
                 </Collapse>
             </span>
             <div>
-                {/* <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} /> */}
-                {/* <Toolbar>
-                    <IconButton>
-                        <MenuIcon />
-                    </IconButton>
-               </Toolbar> */}
-                <div className="no-print reportActions">
+                <div className="no-print" id="reportActionsContainer">
                     <Tooltip title="Create Summary Report" placement="top-start">
-                        <Button className="no-print" style={{ margin: "5px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
+                        <Button className="no-print" variant="contained" color="primary" onClick={() => generatePDF('summary')}>
                             {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Summary "}
                             {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
                             {!reportStatus.loading && !reportStatus.error &&
@@ -256,7 +237,7 @@ const ReportPage = () => {
                         </Button>
                     </Tooltip>
                     <Tooltip title="Create Detailed Report" placement="top-end">
-                        <Button className="no-print" style={{ margin: "5px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
+                        <Button className="no-print" variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
                             {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Detailed"}
                             {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
                             {!reportStatus.loading && !reportStatus.error &&
@@ -267,7 +248,6 @@ const ReportPage = () => {
                     <Tooltip title="Print Page" placement="top">
                         <Button
                             className="no-print"
-                            style={{ margin: "5px" }}
                             variant="contained"
                             color="primary"
                             onClick={() => window.print()}
@@ -291,25 +271,25 @@ const ReportPage = () => {
                         </div>
                     )}
                 </div>
-                <div className="dataTables_wrapper">
-                    <TableContainer className='outagesTable' component={Paper} elevation={12} id="outagesTable">
-                        <Table stickyHeader aria-label="outages table">
-                            <TableHead sx={{ fontSize: '1.875rem' }}>
+                <div className="tables-container">
+                    <TableContainer className='outages-table' component={Paper} elevation={12}>
+                        <Table stickyHeader aria-label="outages table"  id="outagesTable">
+                            <TableHead>
                                 <TableRow>
-                                    <StyledTableHeaderCell sx={{ fontSize: '1.25rem', width: '20%' }}>Worker Name</StyledTableHeaderCell>
-                                    <StyledTableHeaderCell className='outageEndTimeColumn' sx={{ fontSize: '1.25rem', width: '25%' }}>Start</StyledTableHeaderCell>
-                                    <StyledTableHeaderCell className='outageEndTimeColumn' sx={{ fontSize: '1.25rem', width: '25%' }}>End</StyledTableHeaderCell>
-                                    <StyledTableHeaderCell colSpan={2} sx={{ fontSize: '1.25rem', width: '30%' }}>Length / Details</StyledTableHeaderCell>
+                                    <TableCell id='workerNameHead' className="table-header-cell" sx={{ width: '20%' }}>Worker Name</TableCell>
+                                    <TableCell className='outage-start-time-column' sx={{ width: '25%' }}>Start</TableCell>
+                                    <TableCell className='outage-end-time-column' sx={{ width: '25%' }}>End</TableCell>
+                                    <TableCell colSpan={2} sx={{ width: '30%' }}>Length / Details</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {filteredOutages.map((outage) => (
                                     <TableRow key={outage._id}>
-                                        <StyledTableCell sx={{ fontWeight: 'bold' }}>{outage.worker_name}</StyledTableCell>
-                                        <StyledTableCell className='outageEndTimeColumn' >{new Date(outage.outage_start_datetime).toLocaleString()}</StyledTableCell>
-                                        <StyledTableCell className='outageEndTimeColumn' >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</StyledTableCell>
-                                        <StyledTableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</StyledTableCell>
-                                        <StyledTableCell>
+                                        <TableCell className='worker-name-column-header'>{outage.worker_name}</TableCell>
+                                        <TableCell className='outage-start-time-column' >{new Date(outage.outage_start_datetime).toLocaleString()}</TableCell>
+                                        <TableCell className='outage-end-time-column' >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
+                                        <TableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</TableCell>
+                                        <TableCell>
                                             <Link
                                                 className='outage-details-link'
                                                 key={outage._id}
@@ -320,18 +300,18 @@ const ReportPage = () => {
                                                     Details
                                                 </Button>
                                             </Link>
-                                        </StyledTableCell>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
                     </TableContainer>
-                    <TableContainer className='totalsTable' component={Paper} elevation={12} sx={{ width: 'calc(100% - 5px)', overflow: 'hidden' }} id="outagesTotals">
-                        <Table sx={{ width: 'calc(100% - 17px)' }}>
+                    <TableContainer className='totals-table' component={Paper} elevation={12}>
+                        <Table id="outagesTotals">
                             <TableBody>
                                 <TableRow>
-                                    <StyledTableHeaderCell sx={{ fontSize: '1.25rem', width: '20%' }}>Count:&nbsp;{outageCount}</StyledTableHeaderCell>
-                                    <StyledTableHeaderCell sx={{ fontSize: '1.1rem', width: '30%' }}>Total Length: {formattedTotalOutageLength}&nbsp;hrs</StyledTableHeaderCell>
+                                    <TableCell sx={{ width: '20%' }}>Count:&nbsp;{outageCount}</TableCell>
+                                    <TableCell sx={{ width: '30%' }}>Total Length: {formattedTotalOutageLength}&nbsp;hrs</TableCell>
                                 </TableRow>
                             </TableBody>
                         </Table>
