@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ReactECharts } from './ReactECharts.tsx';
 import { TableCell, TableRow, Paper, Table, TableHead, TableBody, TableContainer, Grid, Box } from '@mui/material';
+import './outageDetail.css'
 
 const getOption = (worker, outageInfo) => {
     worker = worker[0];
@@ -133,12 +134,13 @@ const OutageDetail = ({ outageId }) => {
 
     return (
         <div>
-            <TableContainer component={Paper} id="outagesTable">
-                <Table aria-label="outages table">
+            <h2 id="pageTitle">
+                Outage of <span className='emphasizeRed'>{outageInfo.worker_name} {`
+                `}</span> on <span className='emphasizeRed'>{new Date(outageInfo.outage_start_datetime).toLocaleString("en-US")}</span>
+            </h2>
+            <TableContainer component={Paper}>
+                <Table aria-label="outage table" id="outageTable">
                     <TableHead>
-                        <TableRow><TableCell colSpan={4} sx={
-                            {fontSize: '22px', fontWeight: 'bold', textAlign: 'center'}
-                        }>Outage Details for <span style={{color:'red'}}>{outageInfo.worker_name}</span> starting <span style={{color:'red'}}>{new Date(outageInfo.outage_start_datetime).toLocaleString("en-US")}</span></TableCell></TableRow>
                         <TableRow>
                             <TableCell>Worker Name</TableCell>
                             <TableCell>Outage Start</TableCell>
@@ -157,82 +159,35 @@ const OutageDetail = ({ outageId }) => {
                 </Table>
             </TableContainer>
             {option && (
-                <Paper elevation={12} style={{ margin: '20px', display: 'flex', justifyContent: 'center' }}>
+                <Paper elevation={12} className='chartContainer'>
                     <ReactECharts
                         option={option}
                         initOptions={{ renderer: 'svg' }}
-                        style={{ width: '80%', height: 400 }}
+                        className='chart'
                     />
                 </Paper>
             )}
             <div>
-                <Grid container spacing={2}>
-                    <Grid item xs={12} md lg xl>
-                        <Box display="flex" flexWrap="wrap" justifyContent="center" gap={'10px'}>
+                        <Box className='screenshotsBox'>
                             {outageInfo.screenshots.map((screenshot, index) => (
-                                <Paper 
-                                    elevation={4} 
-                                    key={screenshot} 
-                                    sx={{
-                                        "&:hover":{
-                                            transition: 'transform 1s ease-in-out',
-                                            transform: 'scale(1.4)'
-                                        }
-                                    }}
+                                <Paper
+                                    elevation={4}
+                                    key={screenshot}
                                 >
-                                    <a href={process.env.REACT_APP_API_HOST +`/screenshots/${screenshot}`} target="_blank" rel="noopener noreferrer">
+                                    <a href={process.env.REACT_APP_API_HOST + `/screenshots/${screenshot}`} target="_blank" rel="noopener noreferrer">
                                         <img
                                             key={index}
-                                            src={process.env.REACT_APP_API_HOST +`/screenshots/${screenshot}`}
+                                            src={process.env.REACT_APP_API_HOST + `/screenshots/${screenshot}`}
                                             alt={`Screenshot ${index}`}
-                                            style={{ width: '300px', margin: '10px' }}
                                         />
                                     </a>
                                 </Paper>
                             ))
                             }
                         </Box>
-                    </Grid>
-                </Grid>
             </div>
         </div>
     );
-
-
-    // return (
-    //     <div>
-    //         <TableContainer component={Paper} id="outagesTable">
-    //             <Table aria-label="outages table">
-    //                 <TableHead>
-    //                     <TableRow colSpan={4}><TableCell>Outage Details</TableCell></TableRow>
-    //                     <TableRow>
-    //                         <TableCell>Worker Name</TableCell>
-    //                         <TableCell>Outage Start</TableCell>
-    //                         <TableCell>Outage End</TableCell>
-    //                         <TableCell>Outage Length</TableCell>
-    //                     </TableRow>
-    //                 </TableHead>
-    //                 <TableBody>
-    //                     <TableRow key={outageInfo._id}>
-    //                         <TableCell>{outageInfo.worker_name}</TableCell>
-    //                         <TableCell>{new Date(outageInfo.outage_start_datetime).toLocaleString()}</TableCell>
-    //                         <TableCell>{outageInfo.outage_end_datetime ? new Date(outageInfo.outage_end_datetime).toLocaleString() : 'Ongoing'}</TableCell>
-    //                         <TableCell>{outageInfo.outage_length ? `${(outageInfo.outage_length / 3600000).toFixed(2)} hours` : 'Ongoing'}</TableCell>
-    //                     </TableRow>
-    //                 </TableBody>
-    //             </Table>
-    //         </TableContainer>
-    //         <br />
-    //         {
-    //         option && <div style={{ display: 'flex', justifyContent: 'center' }}>
-    //             <ReactECharts
-    //                 option={option}
-    //                 style={{ width: '80%', height: 400 }}
-    //             />
-    //         </div>
-    //         }
-    //     </div>
-    // );
 };
 
 export default OutageDetail;

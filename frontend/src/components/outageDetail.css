@@ -1,0 +1,78 @@
+#pageTitle {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.emphasizeRed {
+    color: red;
+}
+
+#outageTable>tbody>tr>td {
+    line-height: 1.5rem;
+}
+
+#outageTable {
+    min-width: 330px;
+}
+
+#outageTable>thead>tr>th {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: left;
+}
+
+#outageTable>tbody>tr>td {
+    font-size: 14px;
+    text-align: left;
+}
+
+.chartContainer {
+    margin: 10px;
+    display: flex;
+    justify-content: center;
+    height: 400px;
+}
+
+.chart {
+    width: 80%;
+    height: 400px;
+}
+
+.screenshotsBox {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.screenshotsBox>div:hover {
+    transition: transform 1s ease-in-out;
+    transform: scale(1.4);
+}
+
+.screenshotsBox img {
+    width: 300px;
+    margin: 10px;
+}
+
+@media screen and (max-width: 600px) {
+    #pageTitle {
+        white-space: pre-line;
+    }
+
+    #outageTable {
+        display: flex;
+        justify-content: center;
+    }
+
+    #outageTable>thead>tr {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #outageTable>tbody>tr {
+        display: flex;
+        flex-direction: column;
+    }
+}
