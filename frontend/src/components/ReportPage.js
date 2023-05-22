@@ -20,7 +20,6 @@ import { styled } from '@mui/system';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
-import './print.css'
 import './reportPage.css'
 
 
