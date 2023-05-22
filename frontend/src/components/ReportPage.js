@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress, Toolbar, IconButton, Menu } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress, Tooltip, IconButton } from '@mui/material';
+import { PictureAsPdf, Print } from '@mui/icons-material';
 import { styled } from '@mui/system';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -199,7 +199,7 @@ const ReportPage = () => {
     return (
         <>
             <div className="no-print">
-                <h2>Outages Report</h2>
+                <h2 className='pageTitle'>Outages Report</h2>
             </div>
             <span className="no-print">
                 <MemoizedSearchBar
@@ -212,12 +212,60 @@ const ReportPage = () => {
                 />
             </span>
             <div>
-               {/* <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} /> */}
-               <Toolbar>
+                {/* <TableHeader dateRange={searchTerm.dateRange} selectedMiners={uniqueMiners} /> */}
+                {/* <Toolbar>
                     <IconButton>
                         <MenuIcon />
                     </IconButton>
-               </Toolbar>
+               </Toolbar> */}
+                <div className="no-print reportActions">
+                    <Tooltip title="Summary Report" placement="top-start">
+                        <Button className="no-print" style={{ margin: "5px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
+                            {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Summary "}
+                            {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
+                            {!reportStatus.loading && !reportStatus.error &&
+                                <PictureAsPdf />
+                            }
+
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Detailed Report" placement="top-end">
+                        <Button className="no-print" style={{ margin: "5px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
+                            {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Detailed"}
+                            {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
+                            {!reportStatus.loading && !reportStatus.error &&
+                                <PictureAsPdf />
+                            }
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Print Page" placement="top">
+                        <Button
+                            className="no-print"
+                            style={{ margin: "5px" }}
+                            variant="contained"
+                            color="primary"
+                            onClick={() => window.print()}
+                            aria-label='print page'
+                        >
+                            <Print />
+                        </Button>
+                    </Tooltip>
+                    {summaryReportStatus.reportUrl && (
+                        <div style={{ display: 'inline-block', marginTop: 10 }}>
+                            <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                                View/Download Summary Report
+                            </a>
+                        </div>
+                    )}
+                    {reportStatus.reportUrl && (
+                        <div style={{ display: 'inline-block', marginTop: 10 }}>
+                            <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
+                                View/Download Detailed Report
+                            </a>
+                        </div>
+                    )}
+                </div>
+
                 <TableContainer component={Paper} elevation={12} sx={{ margin: '20px,20px,20px,20px', maxHeight: '55vh', width: 'calc(100% - 5px)' }} id="outagesTable">
                     <Table stickyHeader aria-label="outages table">
                         <TableHead sx={{ fontSize: '1.875rem' }}>
@@ -231,7 +279,7 @@ const ReportPage = () => {
                         <TableBody>
                             {filteredOutages.map((outage) => (
                                 <TableRow key={outage._id}>
-                                    <StyledTableCell sx={{fontWeight: 'bold'}}>{outage.worker_name}</StyledTableCell>
+                                    <StyledTableCell sx={{ fontWeight: 'bold' }}>{outage.worker_name}</StyledTableCell>
                                     <StyledTableCell className='outageEndTimeColumn' >{new Date(outage.outage_start_datetime).toLocaleString()}</StyledTableCell>
                                     <StyledTableCell className='outageEndTimeColumn' >{outage.outage_end_datetime ? new Date(outage.outage_end_datetime).toLocaleString() : 'Ongoing'}</StyledTableCell>
                                     <StyledTableCell >{outage.outage_length ? `${(outage.outage_length / 3600000).toFixed(3)} hours` : `${((currentTime - outage.outage_start_datetime) / 3600000).toFixed(3)} hours`}</StyledTableCell>
@@ -263,37 +311,6 @@ const ReportPage = () => {
                     </Table>
                 </TableContainer>
             </div>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('summary')}>
-                {summaryReportStatus.error ? summaryReportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : summaryReportStatus.loading ? "Loading" : "Generate Summary PDF"}
-                {summaryReportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
-            </Button>
-            <Button className="no-print" style={{ margin: "10px" }} variant="contained" color="primary" onClick={() => generatePDF('detailed')}>
-                {reportStatus.error ? reportStatus.error === 503 ? "Server busy, retry?" : "Error, Retry?" : reportStatus.loading ? "Loading" : "Generate Detailed PDF"}
-                {reportStatus.loading && <CircularProgress size={20} color='warning' style={{ marginLeft: 5 }} />}
-            </Button>
-            <Button
-                className="no-print"
-                style={{ margin: "10px" }}
-                variant="contained"
-                color="primary"
-                onClick={() => window.print()}
-            >
-                Print Summary
-            </Button>
-            {summaryReportStatus.reportUrl && (
-                <div style={{ marginTop: 10 }}>
-                    <a href={summaryReportStatus.reportUrl} download={`Summary of Outages (Report Generated  ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
-                        View/Download Summary Report
-                    </a>
-                </div>
-            )}
-            {reportStatus.reportUrl && (
-                <div style={{ marginTop: 10 }}>
-                    <a href={reportStatus.reportUrl} download={`Detailed Outages Report (Generated ${new Date().toLocaleDateString("en-US")}.pdf`} target="_blank" rel="noopener noreferrer">
-                        View/Download Detailed Report
-                    </a>
-                </div>
-            )}
         </>
     );
 };
