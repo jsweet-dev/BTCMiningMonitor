@@ -160,8 +160,8 @@ const SearchBar = ({ filterCriteria, onSearch }) => {
                     direction="vertical"
                     ranges={[
                       {
-                        startDate: searchQuery[key].startDate,
-                        endDate: searchQuery[key].endDate,
+                        startDate: new Date(searchQuery[key].startDate),
+                        endDate: new Date(searchQuery[key].endDate),
                         key: 'range1',
                       },
                     ]}
