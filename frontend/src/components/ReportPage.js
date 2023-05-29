@@ -10,13 +10,11 @@ import {
     Button,
     CircularProgress,
     Tooltip,
-    IconButton,
     Collapse,
     FormControlLabel,
     Switch
 } from '@mui/material';
 import { PictureAsPdf, Print } from '@mui/icons-material';
-import { styled } from '@mui/system';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Link } from 'react-router-dom';
 import SearchBar from './SearchBar';
