@@ -77,7 +77,7 @@ export function ReactECharts({
       chart?.dispose();
       window.removeEventListener("resize", resizeChart);
     };
-  }, [theme]);
+  }, [theme, initOptions]);
 
   useEffect(() => {
     // Update chart
