@@ -13,7 +13,8 @@ process.on('message', async (data) => {
         logMsg(`Child Spawned for ${type} report. Job ID: ${jobId}`, 4);
         const startTime = new Date(searchTerm.dateRange.startDate).getTime();
         const endTime = new Date(searchTerm.dateRange.endDate).getTime();
-        const outages = await getOutages(startTime, endTime);
+        const { workerName, miningUserName } = searchTerm;
+        const outages = await getOutages(startTime, endTime, null, workerName, miningUserName);
 
         try {
             let pdfBlob;
@@ -27,7 +28,7 @@ process.on('message', async (data) => {
             logMsg("Finished generating PDF", 1);
             logMsg("Preview of PDF Blob: " + pdfBlob.slice(0, 100), 8);
             try {
-                const pdfBuffer = pdfBlob; // assuming you already have the PDF as a buffer
+                const pdfBuffer = pdfBlob;
 
                 const totalChunks = Math.ceil(pdfBuffer.length / MAX_CHUNK_SIZE);
                 logMsg(`Preparing to send ${pdfBlob.length} in  ${totalChunks} chunks`, 7);
