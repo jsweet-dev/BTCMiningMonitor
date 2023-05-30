@@ -3,7 +3,7 @@ import './App.css';
 import WorkerGrid from './components/WorkerGrid';
 import ReportPage from './components/ReportPage';
 import OutageDetail from './components/OutageDetail';
-import { BrowserRouter as Router, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Link, Navigate } from 'react-router-dom';
 import { Routes, Route } from 'react-router';
 import { Button } from '@mui/material';
 
@@ -124,6 +124,7 @@ function App() {
             }
           />
           <Route path="/outageDetails/:uniqueKey" element={<MemoizedOutageDetail />}  />
+          <Route path="/" element={<Navigate to="/workers" replace />} />
         </Routes>
       </Router>
     </div>
