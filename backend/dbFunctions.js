@@ -132,10 +132,10 @@ async function getOutages(startTime = null, endTime = null, id = null, workerNam
     query._id = { $eq: new ObjectId(id) }
   }
   if (workerName !== null) {
-    matchStage.$match.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
+    query.worker_name = { $regex: new RegExp(workerName), $options: 'i' };
   }
   if (miningUserName !== null) {
-    matchStage.$match.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
+    query.mining_user_name = { $regex: new RegExp(miningUserName), $options: 'i' };
   } 
   if (chart_exists !== null) {
     query.chart_exists = { $eq: chart_exists };
