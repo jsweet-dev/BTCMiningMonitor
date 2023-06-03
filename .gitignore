@@ -28,3 +28,5 @@ yarn-error.log*
 backend/utils/addMiningUserNameToOutages.js
 backend/outage_charts/*
 backend/utils/addChartExistsFlagToOutages.js
+
+/.vscode
