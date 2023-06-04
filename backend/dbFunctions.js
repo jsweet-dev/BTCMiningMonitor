@@ -39,6 +39,7 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
 
   logMsg(`matchStage: ${JSON.stringify(matchStage)}`, 7);
   const pipeline = [
+    matchStage,
     {
       $lookup: {
         from: 'minerStatus',
@@ -53,7 +54,6 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
         preserveNullAndEmptyArrays: true,
       },
     },
-    matchStage,
     {
       $addFields: {
         custom_sort_order: {
