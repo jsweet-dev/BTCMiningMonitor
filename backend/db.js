@@ -1,18 +1,14 @@
 const mongoose = require('mongoose');
 
 const workerSchema = new mongoose.Schema({
-  mining_user_name: String,
+  mining_user_name: {type: String, index: true},
   worker_name: {type: String, index: true},
   last_share_at: Number,
-  status: Number,
-  host: String,
+  status: {type: Number, index: true},
+  host: {type: String, index: true},
   hash_rate: Number,
   timestamp: {type: Number, index: true}, // store the timestamp of when the data was fetched
 });
-
-workerSchema.index({ timestamp: 1 });
-workerSchema.index({ status: 1 });
-
 
 const Worker = mongoose.model('Worker', workerSchema);
 
@@ -24,12 +20,12 @@ const minerStatusSchema = new mongoose.Schema({
 const MinerStatus = mongoose.model('MinerStatus', minerStatusSchema, 'minerStatus');
 
 const outageSchema = new mongoose.Schema({
-  worker_name: String,
+  worker_name: {type: String, index: true},
   outage_start_datetime: Number,
   outage_end_datetime: Number,
   outage_length: Number,
-  mining_user_name: String,
-  chart_exists: Boolean,
+  mining_user_name: {type: String, index: true},
+  chart_exists: {type: Boolean, index: true},
 });
 
 const Outage = mongoose.model('Outage', outageSchema);
