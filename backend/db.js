@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const workerSchema = new mongoose.Schema({
   mining_user_name: String,
-  worker_name: String,
+  worker_name: {type: String, index: true},
   last_share_at: Number,
   status: Number,
   host: String,
   hash_rate: Number,
-  timestamp: Number, // store the timestamp of when the data was fetched
+  timestamp: {type: Number, index: true}, // store the timestamp of when the data was fetched
 });
 
 workerSchema.index({ timestamp: 1 });
@@ -17,7 +17,7 @@ workerSchema.index({ status: 1 });
 const Worker = mongoose.model('Worker', workerSchema);
 
 const minerStatusSchema = new mongoose.Schema({
-  worker_name: String,
+  worker_name: {type: String, index: true},
   status: String,
 });
 
