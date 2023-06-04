@@ -105,7 +105,9 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
     },
   ];
   logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 7);
-  const statistics = await db.collection('workers').aggregate(pipeline).toArray();
+  const statistics = await Worker.aggregate(pipeline, { allowDiskUse: true }).toArray();
+  const explanation = await Worker.aggregate(pipeline, { allowDiskUse: true }).explain();
+  logMsg(`Query explanation: ${JSON.stringify(explanation)}`, 7);
   return statistics;
 }
 
