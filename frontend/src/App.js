@@ -17,6 +17,7 @@ function App() {
   // const [workers, setWorkers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeframe, setTimeframe] = useState(86400000);
+  const [isLoading, setIsLoading] = useState(true);
   
 
   useEffect(() => {
@@ -24,6 +25,7 @@ function App() {
     // console.log("Timeframe: ",timeframe);
     
     async function fetchWorkers() {
+      setIsLoading(true);
       const { host, workerName, status, miningUserName } = searchTerm;
 
       let startTime = timeframe;
@@ -61,6 +63,7 @@ function App() {
       }).then((data) => data.json());
 
       setDisplayedWorkers(workerData);
+      setIsLoading(false);
     }
 
     fetchWorkers();
@@ -120,6 +123,7 @@ function App() {
                 workers={displayedWorkers}
                 onTimeframeChange={handleTimeframeChange}
                 handleSearch={handleSearch}
+                isLoading={isLoading}
               />
             }
           />
