@@ -41,9 +41,32 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
   const pipeline = [
     matchStage,
     {
+      $sort: {
+        worker_name: 1,
+        timestamp: -1,
+      }
+    },
+    {
+      $group: {
+        _id: '$worker_name',
+        miningUserName: { $first: '$mining_user_name' },
+        host: { $first: '$host' },
+        lastShare: { $max: '$last_share_at' },
+        lastHashRate: { $first: { $divide: ['$hash_rate', 1000000000000] } },
+        status: { $first: '$miner_status.status' },
+        history: {
+          $push: {
+            timestamp: '$timestamp',
+            hashRate: { $divide: ['$hash_rate', 1000000000000] },
+            status: { $cond: { if: { $eq: ['$status', 0] }, then: 1, else: 0 } }
+          }
+        }
+      }
+    },
+    {
       $lookup: {
         from: 'minerStatus',
-        localField: 'worker_name',
+        localField: '_id',
         foreignField: 'worker_name',
         as: 'miner_status',
       },
@@ -70,30 +93,6 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
     },
     {
       $sort: {
-        worker_name: 1,
-        timestamp: -1,
-      }
-    },
-    {
-      $group: {
-        _id: '$worker_name',
-        miningUserName: { $first: '$mining_user_name' },
-        host: { $first: '$host' },
-        lastShare: { $max: '$last_share_at' },
-        custom_sort_order: { $first: '$custom_sort_order' },
-        lastHashRate: { $first: { $divide: ['$hash_rate', 1000000000000] } },
-        status: { $first: '$miner_status.status' },
-        history: {
-          $push: {
-            timestamp: '$timestamp',
-            hashRate: { $divide: ['$hash_rate', 1000000000000] },
-            status: { $cond: { if: { $eq: ['$status', 0] }, then: 1, else: 0 } }
-          }
-        }
-      }
-    },
-    {
-      $sort: {
         custom_sort_order: 1,
         _id: 1,
       },
@@ -105,7 +104,7 @@ async function getMinerStatistics(host = null, workerName = null, status = null,
     },
   ];
   logMsg(`pipeline: ${JSON.stringify(pipeline)}`, 7);
-  const statistics = await Worker.aggregate(pipeline, { allowDiskUse: true }).toArray();
+  const statistics = await Worker.aggregate(pipeline, { allowDiskUse: true });
   const explanation = await Worker.aggregate(pipeline, { allowDiskUse: true }).explain();
   logMsg(`Query explanation: ${JSON.stringify(explanation)}`, 7);
   return statistics;
