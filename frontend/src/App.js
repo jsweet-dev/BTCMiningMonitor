@@ -6,7 +6,7 @@ import OutageDetail from './components/OutageDetail';
 import { BrowserRouter as Router, Link, Navigate } from 'react-router-dom';
 import { Routes, Route } from 'react-router';
 import { Button } from '@mui/material';
-import AdminPage from './components/adminPage';
+import AdminPage from './components/AdminPage';
 
 
 const MemoizedWorkerGrid = React.memo(WorkerGrid);
