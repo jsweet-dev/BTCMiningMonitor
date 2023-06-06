@@ -1,4 +1,8 @@
-const debugLevel = 4;
+let debugLevel = 4;
+
+const setDebugLevel = (level) => {
+  debugLevel = level;
+}
 
 const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
   if (msgLevel <= logLevel){
@@ -8,4 +12,5 @@ const logMsg = (msg, msgLevel=7, logLevel=debugLevel) => {
 
 module.exports = {
     logMsg,
+    setDebugLevel
 };

@@ -1,17 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const { getMinerStatistics, getOutages } = require('./dbFunctions');
-const { logMsg } = require('./logFunctions');
+const { logMsg, setDebugLevel } = require('./logFunctions');
 const { v4: uuidv4 } = require('uuid');
 const { fork } = require('child_process');
 const reportWorkerPath = require.resolve('./reportWorker.js');
+
+const allowedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1', '::ffff:172.19.0.1']; // Add any other IPs you wish to allow
+const secureRoute = (req, res, next) => {
+    const clientIP = req.connection.remoteAddress;
+    if (!allowedIPs.includes(clientIP)) {
+        res.status(403).json({message: 'Access Forbidden for ' + clientIP});
+    } else {
+        next();
+    }
+};
+
+router.put('/debugLevel', secureRoute, async (req, res) => {
+  try {
+    logMsg("Put to /debugLevel", 4)
+    const { debugLevel } = req.body;
+    setDebugLevel(debugLevel);
+    logMsg(`Sending response confirming debugLevel ${debugLevel}`, 4);
+    res.json({ debugLevel });
+  } catch (error) {
+    logMsg(`Sending 500 repsonse for put to /debugLevel: ${error.message}`, 1);
+    res.status(500).json({ message: 'Error setting debugLevel', error: error.message });
+  }
+});
 
 router.post('/workers', async (req, res) => {
   try {
     logMsg("Post to /workers",4)
     const { host, status, startTime, endTime, workerName, miningUserName } = req.body;
     const workers = await getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName);
-    logMsg(`Sending response with ${workers.length} workers`, 1);
+    logMsg(`Sending response with ${workers.length} workers`, 4);
     res.json(workers);
   } catch (error) {
     logMsg(`Sending 500 repsonse for post to /workers: ${error.message}`, 1);
