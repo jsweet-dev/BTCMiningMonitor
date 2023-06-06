@@ -21,7 +21,7 @@ router.put('/debugLevel', secureRoute, async (req, res) => {
     logMsg("Put to /debugLevel", 4)
     const { debugLevel } = req.body;
     setDebugLevel(debugLevel);
-    logMsg(`Sending response confirming debugLevel ${debugLevel}`, 1);
+    logMsg(`Sending response confirming debugLevel ${debugLevel}`, 4);
     res.json({ debugLevel });
   } catch (error) {
     logMsg(`Sending 500 repsonse for put to /debugLevel: ${error.message}`, 1);
@@ -34,7 +34,7 @@ router.post('/workers', async (req, res) => {
     logMsg("Post to /workers",4)
     const { host, status, startTime, endTime, workerName, miningUserName } = req.body;
     const workers = await getMinerStatistics(host, workerName, status, startTime, endTime, miningUserName);
-    logMsg(`Sending response with ${workers.length} workers`, 1);
+    logMsg(`Sending response with ${workers.length} workers`, 4);
     res.json(workers);
   } catch (error) {
     logMsg(`Sending 500 repsonse for post to /workers: ${error.message}`, 1);
