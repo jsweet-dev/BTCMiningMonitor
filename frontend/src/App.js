@@ -6,6 +6,7 @@ import OutageDetail from './components/OutageDetail';
 import { BrowserRouter as Router, Link, Navigate } from 'react-router-dom';
 import { Routes, Route } from 'react-router';
 import { Button } from '@mui/material';
+import AdminPage from './components/adminPage';
 
 
 const MemoizedWorkerGrid = React.memo(WorkerGrid);
@@ -18,31 +19,31 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [timeframe, setTimeframe] = useState(86400000);
   const [isLoading, setIsLoading] = useState(true);
-  
+
 
   useEffect(() => {
     // console.log("Searchterm: ",searchTerm);
     // console.log("Timeframe: ",timeframe);
-    
+
     async function fetchWorkers() {
       setIsLoading(true);
       const { host, workerName, status, miningUserName } = searchTerm;
 
       let startTime = timeframe;
       let endTime = null;
-      
-      const query = { };
+
+      const query = {};
       if (workerName) {
         query.workerName = workerName;
       }
       if (status) {
-        console.log("Status: ",status)
+        console.log("Status: ", status)
         query.status = status === 'true' ? 'up' : 'down';
       }
       if (miningUserName) {
         query.miningUserName = miningUserName;
       }
-      if(host) {
+      if (host) {
         query.host = host;
       }
       const currentTime = Date.now();
@@ -68,7 +69,7 @@ function App() {
 
     fetchWorkers();
 
-      // Refresh the data every 10 minutes
+    // Refresh the data every 10 minutes
     const refreshInterval = setInterval(() => {
       console.log('Refreshing data...' + new Date().toLocaleTimeString());
       fetchWorkers();
@@ -76,7 +77,7 @@ function App() {
 
     // Clear the interval when the component is unmounted
     return () => {
-      if(refreshInterval){
+      if (refreshInterval) {
         clearInterval(refreshInterval);
       }
     };
@@ -94,26 +95,31 @@ function App() {
       status: searchTerm.status.toString().toLowerCase(),
       host: searchTerm.host.toLowerCase(),
     };
-    setSearchTerm({...searchTerm, ...lowerCaseSearchTerm});
+    setSearchTerm({ ...searchTerm, ...lowerCaseSearchTerm });
   }
-  
+
 
   return (
     <div className="App">
       <Router>
-      <nav className="no-print" style={{display: "flex", justifyContent: "center", gridGap: "2rem", alignContent:"center", borderBottom: 'solid 5px black', padding: '5px'}}>
+        <nav className="no-print" style={{ display: "flex", justifyContent: "center", gridGap: "2rem", alignContent: "center", borderBottom: 'solid 5px black', padding: '5px' }}>
           <Link to="/workers">
-            <Button style={{margin: '5px'}} variant="contained" color="primary">
+            <Button style={{ margin: '5px' }} variant="contained" color="primary">
               Workers
             </Button>
           </Link>
           <Link to="/reports">
-              <Button style={{margin: '5px'}} variant="contained" color="primary">
-                Reports
-              </Button>
-            </Link>
+            <Button style={{ margin: '5px' }} variant="contained" color="primary">
+              Reports
+            </Button>
+          </Link>
+          <Link to="/admin">
+            <Button style={{ margin: '5px' }} variant="contained" color="primary">
+              Admin
+            </Button>
+          </Link>
         </nav>
-      
+
         <Routes>
           <Route path="/reports" element={<MemoizedReportPage />} />
           <Route
@@ -127,8 +133,9 @@ function App() {
               />
             }
           />
-          <Route path="/outageDetails/:uniqueKey" element={<MemoizedOutageDetail />}  />
+          <Route path="/outageDetails/:uniqueKey" element={<MemoizedOutageDetail />} />
           <Route path="/" element={<Navigate to="/workers" replace />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Router>
     </div>
